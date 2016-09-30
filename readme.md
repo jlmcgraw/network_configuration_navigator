@@ -15,7 +15,7 @@
 	subnets etc) for all files in the set you're analyzing
 
 	Very useful for trying to follow the flow of complex configurations and to
-	point items that are defined but never used
+	point out items that are defined but never used
 
 	e.g.:
 		./iosToHtml.pl -e -h -f -s ./sample_configs/*.cfg
