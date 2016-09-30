@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="UTF-8">
+        <title>     
+            examples/html_test_case_11.cfg
+        </title>
+        <style>
+            a {
+            text-decoration:none;
+            }
+            a:link, a:visited {
+                color:blue;
+                }
+            a:hover, a:visited:hover {
+                color: white;
+                background-color: blue;
+                }
+            :target {
+                background-color: #ffa;
+                }
+            .pointee {
+                font-weight: bold;
+                }
+            .unused_pointee {
+                color: white;
+                background-color:orange
+                }
+            .pointed_at {
+                font-style: italic;
+                }
+            .deny {
+                color: red;
+                }
+            .permit {
+                color: green;
+                }
+            .remark {
+                font-style: italic;
+                }
+            .remark_subtle {
+                font-style: italic;
+                opacity: .40;
+                }
+            .to_top_label{
+                position: fixed; 
+                top:10px;
+                right:10px;
+                color: white;
+                background-color: Blue;
+                text-decoration:none
+                }
+            div.floating-menu {
+                opacity: .90;
+                position:fixed;
+                top:10px;
+                right:10px;
+                background:#fff4c8;
+                padding:5px;
+                z-index:100;
+                }
+            div.floating-menu a, div.floating-menu h3, div.floating-menu h4 {
+                text-align: right;
+                text-decoration:none;
+                display:block;
+                margin:0 0.5em;
+                }
+            div.floating-menu a:hover {
+                color: white;
+                }
+            div.floating-menu .unused_pointee, div.floating-menu .pointee,  
+            div.floating-menu .remark,  div.floating-menu .deny,  
+            div.floating-menu .permit {
+                text-align: right;
+                display:block;
+                }
+        </style>
+    </head>
+    <body>
+        <pre>
+!
+!
+
+!
+version 12.4
+service timestamps debug datetime msec
+------- timestamps log datetime msec
+<span class="deny">no service password-encryption</span>
+!
+hostname RouterB
+!
+boot-start-marker
+boot-end-marker
+!
+logging buffered 4096 debugging
+!
+<span class="deny">no aaa new-model</span>
+memory-size iomem 5
+<span class="deny">no ip icmp rate-limit unreachable</span>
+ip cef
+!
+!
+!
+!
+<span class="deny">no ip domain lookup</span>
+ip auth-proxy max-nodata-conns 3
+ip admission max-nodata-conns 3
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+ip tcp synwait-time 5
+!
+<br><span id="crypto_keyring_test-keyring" class="pointee">crypto keyring <span class="pointed_at">test-keyring</span></span>
+  local-address 1.1.1.2
+  pre-shared-key address 1.1.1.1 key test-key
+!
+crypto isakmp policy 200
+ encr aes
+ authentication pre-share
+ group 2
+ lifetime 28800
+crypto isakmp keepalive 10 10
+<br><span id="isakmp_profile_test-isakmp-profile" class="unused_pointee">crypto isakmp profile <span class="pointed_at">test-isakmp-profile</span></span>
+   keyring <a href="#crypto_keyring_test-keyring">test-keyring</a>
+   match identity address 1.1.1.1 255.255.255.255
+   local-address 1.1.1.2
+!
+crypto ipsec security-association replay window-size 128
+!
+<br><span id="ipsec_transform_set_myset" class="pointee">crypto ipsec transform-set <span class="pointed_at">myset</span> esp-aes esp-sha-hmac</span>
+crypto ipsec df-bit clear
+!
+<br><span id="ipsec_profile_test-ipsec-profile" class="pointee">crypto ipsec profile <span class="pointed_at">test-ipsec-profile</span></span>
+ set transform-set <a href="#ipsec_transform_set_myset">myset</a>
+ set pfs group2
+!
+!
+!
+!
+!
+<br><span id="interface_Tunnel1" class="">interface <span class="pointed_at">Tunnel1</span></span>
+ ip address 169.254.254.61 255.255.255.252
+ ip virtual-reassembly
+ ip tcp adjust-mss 1387
+ tunnel source 1.1.1.2
+ tunnel destination 1.1.1.1
+ tunnel mode ipsec ipv4
+ tunnel protection ipsec profile <a href="#ipsec_profile_test-ipsec-profile">test-ipsec-profile</a>
+!
+<br><span id="interface_FastEthernet0/0" class="">interface <span class="pointed_at">FastEthernet0/0</span></span>
+ ip address 1.1.1.2 255.255.255.0
+<span class="remark_subtle"> ! 1 PEER on 1.1.1.0/24: <a href="html_test_case_8.cfg.html#interface_Ethernet0/0">html_test_case_8</a></span>
+ duplex auto
+ speed auto
+!
+<br><span id="interface_FastEthernet0/1" class="">interface <span class="pointed_at">FastEthernet0/1</span></span>
+ ip address 10.10.200.1 255.255.255.0
+ duplex auto
+ speed auto
+!
+ip forward-protocol nd
+ip route 10.1.1.0 255.255.255.0 Tunnel1
+!
+!
+ip http server
+ip http authentication local
+<span class="deny">no ip http secure-server</span>
+!
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+line con 0
+ exec-timeout 0 0
+ privilege level 15
+ logging synchronous
+line aux 0
+ exec-timeout 0 0
+ privilege level 15
+ logging synchronous
+line vty 0 4
+ login
+!
+!
+end
+        </pre>
+        <div class="floating-menu">
+    <h3>RouterB (html_test_case_11.cfg)</h3>
+    <a href="#">Top</a>
+    <br>
+    <h4><u>Beginnings of Sections</u></h4>
+<a href="#crypto_keyring_test-keyring">Crypto_keyring</a>
+<a href="#interface_Tunnel1">Interface</a>
+<a href="#ipsec_profile_test-ipsec-profile">Ipsec_profile</a>
+<a href="#ipsec_transform_set_myset">Ipsec_transform_set</a>
+<a href="#isakmp_profile_test-isakmp-profile">Isakmp_profile</a>
+<br>
+<h4><u>Key</u></h4>
+<span class="unused_pointee">Unused Pointee</span>
+<span class="pointee">Used Pointee</span>
+<span class="deny">Deny/No</span>
+<span class="permit">Permit/Included</span>
+<span class="remark">Remark/Description</span>
+<br><h4><u>Unused Pointees</u></h4>
+<a href="#isakmp_profile_test-isakmp-profile">isakmp_profile_test-isakmp-profile</a>
+</div>
+    </body>
+</html>

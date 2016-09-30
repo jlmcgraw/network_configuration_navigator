@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="UTF-8">
+        <title>     
+            examples/html_test_case_10.cfg
+        </title>
+        <style>
+            a {
+            text-decoration:none;
+            }
+            a:link, a:visited {
+                color:blue;
+                }
+            a:hover, a:visited:hover {
+                color: white;
+                background-color: blue;
+                }
+            :target {
+                background-color: #ffa;
+                }
+            .pointee {
+                font-weight: bold;
+                }
+            .unused_pointee {
+                color: white;
+                background-color:orange
+                }
+            .pointed_at {
+                font-style: italic;
+                }
+            .deny {
+                color: red;
+                }
+            .permit {
+                color: green;
+                }
+            .remark {
+                font-style: italic;
+                }
+            .remark_subtle {
+                font-style: italic;
+                opacity: .40;
+                }
+            .to_top_label{
+                position: fixed; 
+                top:10px;
+                right:10px;
+                color: white;
+                background-color: Blue;
+                text-decoration:none
+                }
+            div.floating-menu {
+                opacity: .90;
+                position:fixed;
+                top:10px;
+                right:10px;
+                background:#fff4c8;
+                padding:5px;
+                z-index:100;
+                }
+            div.floating-menu a, div.floating-menu h3, div.floating-menu h4 {
+                text-align: right;
+                text-decoration:none;
+                display:block;
+                margin:0 0.5em;
+                }
+            div.floating-menu a:hover {
+                color: white;
+                }
+            div.floating-menu .unused_pointee, div.floating-menu .pointee,  
+            div.floating-menu .remark,  div.floating-menu .deny,  
+            div.floating-menu .permit {
+                text-align: right;
+                display:block;
+                }
+        </style>
+    </head>
+    <body>
+        <pre>
+Using 7567 out of 245752 bytes
+version 15.1
+!
+<br><span id="object_group_CLOUD1" class="unused_pointee">object-group network <span class="pointed_at">CLOUD1</span></span>
+ 10.20.0.0 255.255.0.0
+!
+<br><span id="object_group_MYLOCALNETS" class="pointee">object-group network <span class="pointed_at">MYLOCALNETS</span></span>
+ 10.0.200.0 255.255.255.0
+ 10.0.202.0 255.255.255.0
+!
+<br><span id="object_group_NEWCOLO" class="pointee">object-group network <span class="pointed_at">NEWCOLO</span></span>
+ 10.208.0.0 255.240.0.0
+ 10.176.0.0 255.240.0.0
+!
+<br><span id="track_track 100" class="pointee">track 100 ip sla 100 reachability</span>
+!
+<br><span id="track_track 200" class="pointee">track 200 ip sla 200 reachability</span>
+!
+<br><span id="crypto_keyring_keyring-vpn-colo" class="pointee">crypto keyring <span class="pointed_at">keyring-vpn-colo</span></span>
+  local-address 70.70.70.71
+  pre-shared-key address 90.90.90.90 key COLOKEY
+<br><span id="crypto_keyring_keyring-vpn-cloud1" class="pointee">crypto keyring <span class="pointed_at">keyring-vpn-cloud1</span></span>
+  local-address 70.70.70.70
+  pre-shared-key address 60.60.60.60 key CLOUDKEY1
+<br><span id="crypto_keyring_keyring-vpn-cloud2" class="pointee">crypto keyring <span class="pointed_at">keyring-vpn-cloud2</span></span>
+  local-address 70.70.70.70
+  pre-shared-key address 50.50.50.50 key CLOUDKEY2
+ group 2
+ lifetime 43200
+!
+crypto isakmp policy 200
+ encr aes
+ authentication pre-share
+ group 2
+ lifetime 28800
+!
+crypto isakmp policy 201
+ encr aes
+ authentication pre-share
+ group 2
+ lifetime 28800
+crypto isakmp key SCRUBBED address 90.90.90.90
+crypto isakmp keepalive 10 10
+<br><span id="isakmp_profile_isakmp-vpn-cloud1" class="unused_pointee">crypto isakmp profile <span class="pointed_at">isakmp-vpn-cloud1</span></span>
+   keyring <a href="#crypto_keyring_keyring-vpn-cloud1">keyring-vpn-cloud1</a>
+   match identity address 50.50.50.50 255.255.255.255
+   local-address 70.70.70.70
+<br><span id="isakmp_profile_isakmp-vpn-cloud2" class="unused_pointee">crypto isakmp profile <span class="pointed_at">isakmp-vpn-cloud2</span></span>
+   keyring <a href="#crypto_keyring_keyring-vpn-cloud2">keyring-vpn-cloud2</a>
+   match identity address 60.60.60.60 255.255.255.255
+   local-address 70.70.70.70
+<br><span id="isakmp_profile_isakmp-vpn-colo" class="pointee">crypto isakmp profile <span class="pointed_at">isakmp-vpn-colo</span></span>
+   keyring <a href="#crypto_keyring_keyring-vpn-colo">keyring-vpn-colo</a>
+   match identity address 90.90.90.90 255.255.255.255
+   local-address 70.70.70.71
+!
+crypto ipsec security-association replay window-size 128
+!
+<br><span id="ipsec_transform_set_ipsec-prop-vpn-cloud1" class="pointee">crypto ipsec transform-set <span class="pointed_at">ipsec-prop-vpn-cloud1</span> esp-aes esp-sha-hmac</span>
+<br><span id="ipsec_transform_set_ipsec-prop-vpn-cloud2" class="pointee">crypto ipsec transform-set <span class="pointed_at">ipsec-prop-vpn-cloud2</span> esp-aes esp-sha-hmac</span>
+<br><span id="ipsec_transform_set_vpn-colo" class="pointee">crypto ipsec transform-set <span class="pointed_at">vpn-colo</span> esp-aes esp-sha-hmac</span>
+crypto ipsec df-bit clear
+!
+<br><span id="ipsec_profile_ipsec-vpn-cloud1" class="pointee">crypto ipsec profile <span class="pointed_at">ipsec-vpn-cloud1</span></span>
+ set transform-set <a href="#ipsec_transform_set_ipsec-prop-vpn-cloud1">ipsec-prop-vpn-cloud1</a>
+ set pfs group2
+!
+<br><span id="ipsec_profile_ipsec-vpn-cloud2" class="pointee">crypto ipsec profile <span class="pointed_at">ipsec-vpn-cloud2</span></span>
+ set transform-set <a href="#ipsec_transform_set_ipsec-prop-vpn-cloud2">ipsec-prop-vpn-cloud2</a>
+ set pfs group2
+!
+<br><span id="ipsec_profile_ipsec-vpn-colo" class="unused_pointee">crypto ipsec profile <span class="pointed_at">ipsec-vpn-colo</span></span>
+ set transform-set <a href="#ipsec_transform_set_vpn-colo">vpn-colo</a>
+ set pfs group2
+!
+!
+<br><span id="crypto_map_vpn-colo" class="unused_pointee">crypto map <span class="pointed_at">vpn-colo</span> 150 ipsec-isakmp</span>
+ set peer 90.90.90.90
+ set transform-set <a href="#ipsec_transform_set_vpn-colo">vpn-colo</a>
+ set pfs group2
+ set isakmp-profile <a href="#isakmp_profile_isakmp-vpn-colo">isakmp-vpn-colo</a>
+ match address <a href="#acl_150">150</a>
+!
+!
+!
+!
+!
+!
+<br><span id="interface_Tunnel1" class="pointee">interface <span class="pointed_at">Tunnel1</span></span>
+ ip address 169.254.255.74 255.255.255.252
+ ip virtual-reassembly in
+ ip tcp adjust-mss 1387
+ tunnel source 70.70.70.70
+ tunnel mode ipsec ipv4
+ tunnel destination 50.50.50.50
+ tunnel protection ipsec profile <a href="#ipsec_profile_ipsec-vpn-cloud1">ipsec-vpn-cloud1</a>
+!
+<br><span id="interface_Tunnel2" class="pointee">interface <span class="pointed_at">Tunnel2</span></span>
+ ip address 169.254.255.78 255.255.255.252
+ ip virtual-reassembly in
+ ip tcp adjust-mss 1387
+ tunnel source 70.70.70.70
+ tunnel mode ipsec ipv4
+ tunnel destination 60.60.60.60
+ tunnel protection ipsec profile <a href="#ipsec_profile_ipsec-vpn-cloud2">ipsec-vpn-cloud2</a>
+!
+<br><span id="interface_GigabitEthernet0/0" class="">interface <span class="pointed_at">GigabitEthernet0/0</span></span>
+ <span class="remark">description inside</span>
+ ip address 10.0.200.5 255.255.255.0
+ duplex full
+ speed 1,000
+ <span class="deny">no mop enabled</span>
+!
+<br><span id="interface_GigabitEthernet0/1" class="">interface <span class="pointed_at">GigabitEthernet0/1</span></span>
+ <span class="remark">description outside</span>
+ ip address 70.70.70.70 255.255.255.224 secondary
+ ip address 70.70.70.71 255.255.255.224
+ ip access-group 102 in
+ <span class="deny">no ip redirects</span>
+ <span class="deny">no ip unreachables</span>
+ <span class="deny">no ip proxy-arp</span>
+ duplex full
+ speed 1,000
+ <span class="deny">no cdp enable</span>
+!
+ip forward-protocol nd
+!
+ip route 10.20.0.0 255.255.0.0 Tunnel1 <a href="#track_track 100">track 100</a>
+-- ----- --------- ----------- Tunnel2 <a href="#track_track 200">track 200</a>
+ip route 0.0.0.0 0.0.0.0 70.70.70.1
+ip route 10.0.200.0 255.255.255.0 10.0.200.1
+ip route 10.0.202.0 255.255.255.0 10.0.200.1
+ip route 10.176.0.0 255.240.0.0 GigabitEthernet0/1
+ip route 10.208.0.0 255.240.0.0 GigabitEthernet0/1
+!
+<br><span id="ip_sla_100" class="pointee">ip sla <span class="pointed_at">100</span></span>
+ icmp-echo 169.254.255.73 source-interface <a href="#interface_Tunnel1">Tunnel1</a>
+ frequency 5
+ip sla schedule <a href="#ip_sla_100">100</a> life forever start-time now
+<br><span id="ip_sla_200" class="pointee">ip sla <span class="pointed_at">200</span></span>
+ icmp-echo 169.254.255.77 source-interface <a href="#interface_Tunnel2">Tunnel2</a>
+ frequency 5
+ip sla schedule <a href="#ip_sla_200">200</a> life forever start-time now
+<br><span id="acl_150" class="pointee">access-list <span class="pointed_at">150</span> <span class="permit">permit ip object-group <a href="#object_group_MYLOCALNETS">MYLOCALNETS</a> object-group <a href="#object_group_NEWCOLO">NEWCOLO</a></span></span>
+!
+        </pre>
+        <div class="floating-menu">
+    <h3>no name (html_test_case_10.cfg)</h3>
+    <a href="#">Top</a>
+    <br>
+    <h4><u>Beginnings of Sections</u></h4>
+<a href="#acl_150">Acl</a>
+<a href="#crypto_keyring_keyring-vpn-colo">Crypto_keyring</a>
+<a href="#crypto_map_vpn-colo">Crypto_map</a>
+<a href="#interface_Tunnel1">Interface</a>
+<a href="#ip_sla_100">Ip_sla</a>
+<a href="#ipsec_profile_ipsec-vpn-cloud1">Ipsec_profile</a>
+<a href="#ipsec_transform_set_ipsec-prop-vpn-cloud1">Ipsec_transform_set</a>
+<a href="#isakmp_profile_isakmp-vpn-cloud1">Isakmp_profile</a>
+<a href="#object_group_CLOUD1">Object_group</a>
+<a href="#track_track 100">Track</a>
+<br>
+<h4><u>Key</u></h4>
+<span class="unused_pointee">Unused Pointee</span>
+<span class="pointee">Used Pointee</span>
+<span class="deny">Deny/No</span>
+<span class="permit">Permit/Included</span>
+<span class="remark">Remark/Description</span>
+<br><h4><u>Unused Pointees</u></h4>
+<a href="#crypto_map_vpn-colo">crypto_map_vpn-colo</a>
+<a href="#ipsec_profile_ipsec-vpn-colo">ipsec_profile_ipsec-vpn-colo</a>
+<a href="#isakmp_profile_isakmp-vpn-cloud1">isakmp_profile_isakmp-vpn-cloud1</a>
+<a href="#isakmp_profile_isakmp-vpn-cloud2">isakmp_profile_isakmp-vpn-cloud2</a>
+<a href="#object_group_CLOUD1">object_group_CLOUD1</a>
+</div>
+    </body>
+</html>
