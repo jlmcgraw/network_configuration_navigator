@@ -1259,28 +1259,35 @@ sub extra_formatting {
 
     #Style PERMIT lines
     $line
-        =~ s/ (\s+) (permit|included) (  .*? $  ) /$1<span class="permit">$2$3<\/span>/ixg;
+        =~ s/ (\s+) (permit)  ( \s+ .*? $  ) /$1<span class="permit">$2$3<\/span>/ixg;
 
     #Style DENY lines
     $line
-        =~ s/ (\s+) (deny|excluded) (  .*?  $ ) /$1<span class="deny">$2$3<\/span>/ixg;
+        =~ s/ (\s+) (deny) ( \s+ .*?  $ ) /$1<span class="deny">$2$3<\/span>/ixg;
 
     #Style NO lines
     $line
-        =~ s/^( \s* ) (no) (  .*?  $ ) /$1<span class="deny">$2$3<\/span>/ixg;
+        =~ s/^( \s* ) (no) ( \s+  .*?  $ ) /$1<span class="deny">$2$3<\/span>/ixg;
 
     #Style REMARK lines
     $line
-        =~ s/ (\s+) (remark|description) ( .*? $ ) /$1<span class="remark">$2$3<\/span>/ixg;
+        =~ s/ (\s+) (remark|description) ( \s+ .*? $ ) /$1<span class="remark">$2$3<\/span>/ixg;
 
     #Style CONFORM-ACTION lines
     $line
-        =~ s/ (\s+) (conform-action) ( .*? $ ) /$1<span class="permit">$2$3<\/span>/ixg;
+        =~ s/ (\s+) (conform-action) ( \s+ .*? $ ) /$1<span class="permit">$2$3<\/span>/ixg;
 
     #Style EXCEED-ACTION lines
     $line
-        =~ s/ (\s+) (exceed-action) ( .*? $ ) /$1<span class="deny">$2$3<\/span>/ixg;
+        =~ s/ (\s+) (exceed-action) ( \s+ .*? $ ) /$1<span class="deny">$2$3<\/span>/ixg;
 
+    #Style INCLUDE lines
+    $line
+        =~ s/ (\s+) (included)  ( .*? $  ) /$1<span class="permit">$2$3<\/span>/ixg;
+
+    #Style EXCLUDE lines
+    $line
+        =~ s/ (\s+) (excluded) ( .*?  $ ) /$1<span class="deny">$2$3<\/span>/ixg;
     return $line;
 }
 
