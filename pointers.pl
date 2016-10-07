@@ -112,6 +112,12 @@
             access-list \s+
             (?<points_to> $list_of_pointees_ref->{"acl"})
             /ixsm,
+    21 => qr /^ \s*                                           #ACE
+            login \s+
+			quiet-mode \s+
+			access-class \s+
+            (?<points_to> $list_of_pointees_ref->{"acl"})
+            /ixsm,
     },
 
     'policy_map' => {
@@ -208,6 +214,15 @@
             distribute-list \s+
             route-map \s+
             (?<points_to> $list_of_pointees_ref->{"route_map"})/ixsm,
+    12 => qr/^ \s*
+            ip \s+ 
+			nat \s+ 
+			inside \s+ 
+			source \s+
+			route-map \s+
+            (?<points_to> $list_of_pointees_ref->{"route_map"})/ixsm,
+
+
     },
 
     'prefix_list' => {
@@ -540,6 +555,15 @@
                         pki \s+
                         trustpoint \s+
         (?<points_to> (?: $list_of_pointees_ref->{"dhcp_pool"}) )
+        /ixsm,
+    },
+    'nat_pool' => {
+    1 => qr/^ \s*
+                        ip \s+
+                        nat \s+
+                        .* \s+
+						pool \s+
+        (?<points_to> (?: $list_of_pointees_ref->{"nat_pool"}) )
         /ixsm,
     },
     'ip_inspect' => {

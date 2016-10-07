@@ -357,6 +357,17 @@
             (\s+|$)
             /ixsm,
     },
+    'nat_pool' => {
+    1 => qr/(?<unique_id>
+                        ^ \s*
+                        ip \s+
+                        nat \s+
+                        pool \s+
+                        (?<pointed_at> $valid_cisco_name)
+            )
+            (\s+|$)
+            /ixsm,
+    },
     'ip_inspect' => {
     1 => qr/(?<unique_id>
                         ^ \s*
