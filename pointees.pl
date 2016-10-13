@@ -117,7 +117,12 @@
     },
     'community_list' => {
     1 =>
-        qr/(?<unique_id> ^ \s* ip \s+ community-list \s+ (?:standard|extended) \s+ (?<pointed_at> $valid_cisco_name) )/ixsm,
+        qr/(?<unique_id> ^ \s* 
+                ip \s+ 
+                community-list \s+ 
+                (?:standard|extended|expanded) \s+ 
+                (?<pointed_at> $valid_cisco_name) )
+                /ixsm,
     2 => qr/(?<unique_id> ^ \s*
                         ip \s+
                         extcommunity-list \s+
@@ -156,28 +161,30 @@
     #             )/ixsm,
     },
     'track' => {
-    1 => qr/(?<unique_id>^ \s*
-                        (?<pointed_at> track \s+ $valid_cisco_name )
-            )/ixsm,
+		1 => qr/(?<unique_id>
+                                ^ \s*
+                                (?<pointed_at>  track \s+ $valid_cisco_name )
+		        )/ixsm,
 
-    },
+		},
+
     'vrf' => {
-    1 => qr/(?<unique_id>
-                        ^ \s*
-                        ip \s+
-                        vrf \s+
-                        (?<pointed_at> $valid_cisco_name)
-                    )
-                    $
-                    /ixsm,
-    2 => qr/(?<unique_id>
-                        ^ \s*
-                        vrf \s+
-                        definition \s+
-                        (?<pointed_at> $valid_cisco_name)
-                    )
-                    $
-                    /ixsm,
+		1 => qr/(?<unique_id>
+		                    ^ \s*
+		                    ip \s+
+		                    vrf \s+
+		                    (?<pointed_at> $valid_cisco_name)
+		                )
+		                $
+		                /ixsm,
+		2 => qr/(?<unique_id>
+		                    ^ \s*
+		                    vrf \s+
+		                    definition \s+
+		                    (?<pointed_at> $valid_cisco_name)
+		                )
+		                $
+		                /ixsm,
 
     #NXOS
     3 => qr/(?<unique_id>

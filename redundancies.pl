@@ -19,7 +19,7 @@
         ^ \s*
         (?<match>
         neighbor \s+
-        $ipv4AddressRegex
+        (?: $ipv4AddressRegex | $valid_cisco_name )
         )
         /ixsm,
 4 => qr/

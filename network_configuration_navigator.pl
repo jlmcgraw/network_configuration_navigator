@@ -1436,6 +1436,7 @@ sub add_pointer_links_to_line {
                     #Notice the (?-x:$label)
                     #That's disabling ignoring spaces just for the $label part
                     #Handles identifiers with spaces in them
+                    #BUG TODO How to handle when pointers of two different types (eg a TRACK and an SLA) with the same name are referenced in the same line
                     $line =~ s/(\s+) (?-x:$label) (\s+|$)/$1$linkText$2/gx;
                 }
 

@@ -148,7 +148,12 @@
 
     'route_map' => {
     1 =>
-        qr/^ \s* neighbor \s+ $RE{net}{IPv4} \s+ route-map \s+ (?<points_to> $list_of_pointees_ref->{"route_map"})/ixsm,
+        qr/^ \s* 
+            neighbor \s+ 
+            (?: $RE{net}{IPv4} | $valid_cisco_name ) \s+ 
+            route-map \s+ 
+            (?<points_to> $list_of_pointees_ref->{"route_map"})
+            /ixsm,
     2 => qr/^ \s*
             redistribute \s+
             (?:static|bgp|ospf|eigrp|isis|rip)
@@ -199,7 +204,13 @@
             /ixsm,
 
     8 =>
-        qr/^ \s* neighbor \s+ $RE{net}{IPv4} \s+ default-originate \s+ route-map \s+ (?<points_to> $list_of_pointees_ref->{"route_map"})/ixsm,
+        qr/^ \s* 
+			neighbor \s+ 
+			$RE{net}{IPv4} \s+ 
+			default-originate \s+ 
+			route-map \s+ 
+			(?<points_to> $list_of_pointees_ref->{"route_map"})
+			/ixsm,
 
     9 => qr/^ \s*
             import \s+
@@ -217,7 +228,7 @@
     12 => qr/^ \s*
             ip \s+ 
 			nat \s+ 
-			inside \s+ 
+			(?: (inside | outside) \s+)?
 			source \s+
 			route-map \s+
             (?<points_to> $list_of_pointees_ref->{"route_map"})/ixsm,
@@ -339,157 +350,164 @@
     #             /ixsm,
     },
     'track' => {
-    1 => qr/    \s+
-                (?<points_to> $list_of_pointees_ref->{"track"} )
-        /isxm,
+		1 => qr/    
+		            (?<points_to> track \s+ $list_of_pointees_ref->{"track"} )
+		    /isxm,
 
-    },
+		},
     'vrf' => {
-    1 => qr/^ \s*
-                    ip \s+
-                    vrf \s+
-                    (?: forwarding | receive) \s+
-                    (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
-                    (\s+|$)
-        /ixsm,
+		1 => qr/^ \s*
+		                ip \s+
+		                vrf \s+
+		                (?: forwarding | receive) \s+
+		                (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
+		                (\s+|$)
+		    /ixsm,
 
-    2 => qr/^ \s*
-                    vrf \s+
-                    forwarding \s+
-                    (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
-                    (\s+|$)
-        /ixsm,
+		2 => qr/^ \s*
+		                vrf \s+
+		                forwarding \s+
+		                (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
+		                (\s+|$)
+		    /ixsm,
 
-    3 => qr/^ \s*
-                    ip \s+
-                    route \s+
-                    vrf \s+
-                    (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
-                    (\s+|$)
-        /ixsm,
+		3 => qr/^ \s*
+		                ip \s+
+		                route \s+
+		                vrf \s+
+		                (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
+		                (\s+|$)
+		    /ixsm,
 
-    #NXOS
-    4 => qr/        \s+
-                    use-vrf \s+
-                    (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
-                    (\s+|$)
-        /ixsm,
-    5 => qr/        \s+
-                    address-family \s+
-                    (?:ipv4 | ipv6 | CLNS | VPNv4 | L2VPN ) \s+
-                    vrf \s+
-                    (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
-                    (\s+|$)
-        /ixsm,
+		#NXOS
+		4 => qr/        \s+
+		                use-vrf \s+
+		                (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
+		                (\s+|$)
+		    /ixsm,
+		5 => qr/        \s+
+		                address-family \s+
+		                (?:ipv4 | ipv6 | CLNS | VPNv4 | L2VPN ) \s+
+		                vrf \s+
+		                (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
+		                (\s+|$)
+		    /ixsm,
 
-    #Match any mention of "vrf" except for the definition of one
-    6 => qr/(?<!^ ip)
-                \s+
-                vrf \s+
-                (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
-                (\s+|$)
-        /ixsm,
-    },
+		#Match any mention of "vrf" except for the definition of one
+		6 => qr/(?<!^ ip)
+		            \s+
+		            vrf \s+
+		            (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
+		            (\s+|$)
+		    /ixsm,
+		},
     'key_chain' => {
 
-    #Make this guy have to have some alphanumeric in front of him
-    1 => qr/ \w+ \s+
-        key-chain \s+
-        (?<points_to> (?: $list_of_pointees_ref->{"key_chain"}) )
-        (\s+|$)
-        /ixsm,
-    },
+		#Make this guy have to have some alphanumeric in front of him
+		1 => qr/ \w+ \s+
+		    key-chain \s+
+		    (?<points_to> (?: $list_of_pointees_ref->{"key_chain"}) )
+		    (\s+|$)
+		    /ixsm,
+		},
     'ip_sla' => {
-    1 => qr/ ^ \s*
-        ip \s+
-        sla \s+
-        schedule \s+
-        (?<points_to> (?: $list_of_pointees_ref->{"ip_sla"}) )
-        /ixsm,
+        1 => qr/ ^ \s*
+            ip \s+
+            sla \s+
+            schedule \s+
+            (?<points_to> (?: $list_of_pointees_ref->{"ip_sla"}) )
+            /ixsm,
+#         2 => qr/ ^ \s*
+#                 track \s+
+#                 \d+ \s+
+#                 ip \s+
+#                 sla \s+
+#                 (?<points_to> (?: $list_of_pointees_ref->{"ip_sla"}) )
+#             /ixsm,
 
-    #     2 => qr/ ip \s+
-    #         sla \s+
-    #         (?<points_to> (?: $list_of_pointees_ref->{"ip_sla"}) )
-    #         /ixsm,
-    },
+        #     2 => qr/ ip \s+
+        #         sla \s+
+        #         (?<points_to> (?: $list_of_pointees_ref->{"ip_sla"}) )
+        #         /ixsm,
+        },
     'class' => {
 
-    #NXOS
-    1 => qr/ ^ \s*
-        class \s+
-        (?<points_to> (?: $list_of_pointees_ref->{"class"}))
-        (\s*|$)
-        /ixsm,
+		#NXOS
+		1 => qr/ ^ \s*
+		    class \s+
+		    (?<points_to> (?: $list_of_pointees_ref->{"class"}))
+		    (\s*|$)
+		    /ixsm,
 
-    #NXOS
-    2 => qr/ ^ \s*
-        class \s+
-        type \s+
-        (?: queuing | network-qos ) \s+
-        (?<points_to> (?: $list_of_pointees_ref->{"class"}) )
-        (\s*|$)
-        /ixsm,
+		#NXOS
+		2 => qr/ ^ \s*
+		    class \s+
+		    type \s+
+		    (?: queuing | network-qos ) \s+
+		    (?<points_to> (?: $list_of_pointees_ref->{"class"}) )
+		    (\s*|$)
+		    /ixsm,
 
-    #ASA
-    3 => qr/ ^ \s*
-        match \s+
-        class-map \s+
-        (?<points_to> (?: $list_of_pointees_ref->{"class"}) )
-        (\s*|$)
-        /ixsm,
+		#ASA
+		3 => qr/ ^ \s*
+		    match \s+
+		    class-map \s+
+		    (?<points_to> (?: $list_of_pointees_ref->{"class"}) )
+		    (\s*|$)
+		    /ixsm,
 
-    #ASA
-    4 => qr/ ^ \s*
-        class \s+
-        type \s+
-        (?: inspect ) \s+
-        (?: $valid_cisco_name \s+ )?
-        (?<points_to> (?: $list_of_pointees_ref->{"class"}) )
-        (\s*|$)
-        /ixsm,
+		#ASA
+		4 => qr/ ^ \s*
+		    class \s+
+		    type \s+
+		    (?: inspect ) \s+
+		    (?: $valid_cisco_name \s+ )?
+		    (?<points_to> (?: $list_of_pointees_ref->{"class"}) )
+		    (\s*|$)
+		    /ixsm,
 
-    },
+		},
     'aaa_group' => {
-    1 => qr/ ^ \s*
-        aaa \s+
-        (?: authentication | authorization | accounting ) \s+
-        .*?
-        group \s+
-        (?<points_to> (?: $list_of_pointees_ref->{"aaa_group"}) )
-        /ixsm,
+		1 => qr/ ^ \s*
+		    aaa \s+
+		    (?: authentication | authorization | accounting ) \s+
+		    .*?
+		    group \s+
+		    (?<points_to> (?: $list_of_pointees_ref->{"aaa_group"}) )
+		    /ixsm,
 
-    },
+		},
     'routing_process' => {
 
-    #     1 => qr/^ \s*
-    #             router \s+
-    #             (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
-    #             /ixsm,
-    2 => qr/^ \s*
-            ip \s+
-            router \s+
-            (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
-            /ixsm,
-    3 => qr/^ \s*
-            ip \s+
-            summary-address \s+
-            (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
-            /ixsm,
-    4 => qr/^ \s*
-            redistribute \s+
-            (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
-            /ixsm,
-    5 => qr/^ \s*
-            ip \s+
-            hello-interval \s+
-            (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
-            /ixsm,
-    5 => qr/^ \s*
-            ip \s+
-            hold-time \s+
-            (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
-            /ixsm,                
-    },
+		#     1 => qr/^ \s*
+		#             router \s+
+		#             (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
+		#             /ixsm,
+		2 => qr/^ \s*
+		        ip \s+
+		        router \s+
+		        (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
+		        /ixsm,
+		3 => qr/^ \s*
+		        ip \s+
+		        summary-address \s+
+		        (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
+		        /ixsm,
+		4 => qr/^ \s*
+		        redistribute \s+
+		        (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
+		        /ixsm,
+		5 => qr/^ \s*
+		        ip \s+
+		        hello-interval \s+
+		        (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
+		        /ixsm,
+		5 => qr/^ \s*
+		        ip \s+
+		        hold-time \s+
+		        (?<points_to> (?: $list_of_pointees_ref->{"routing_process"}) )
+		        /ixsm,                
+		},
     'object_group' => {
 
     #BUG TODO: Catch both
