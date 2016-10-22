@@ -351,7 +351,7 @@
     },
     'track' => {
 		1 => qr/    
-		            (?<points_to> track \s+ $list_of_pointees_ref->{"track"} )
+		            (?<points_to> $list_of_pointees_ref->{"track"} )
 		    /isxm,
 
 		},
@@ -399,6 +399,12 @@
 		            vrf \s+
 		            (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
 		            (\s+|$)
+		    /ixsm,
+ 		7 => qr/^ \s*
+		                vrf \s+
+		                member \s+
+		                (?<points_to> (?: $list_of_pointees_ref->{"vrf"}) )
+		                (\s+|$)
 		    /ixsm,
 		},
     'key_chain' => {
@@ -806,6 +812,12 @@
     'voice_class_sip_profiles' => {
     1 => qr/ ^ \s*
             sip-profiles \s+
+            (?<points_to> (?: $list_of_pointees_ref->{"voice_class_sip_profiles"}) )
+            /ixsm,
+    2 => qr/ ^ \s*
+            voice-class \s+
+            sip \s+
+            profiles \s+
             (?<points_to> (?: $list_of_pointees_ref->{"voice_class_sip_profiles"}) )
             /ixsm,
     },

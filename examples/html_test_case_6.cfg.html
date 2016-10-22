@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <title>     
-            html_test_case_6.cfg
+            ./examples/html_test_case_6.cfg
         </title>
         <style>
             a {
@@ -502,7 +502,7 @@ ip http secure-server
 ip http timeout-policy idle 60 life 86400 requests 10000
 !
 !
-ip nat pool websrv 10.10.10.60 10.10.10.60 netmask 255.255.255.0
+<br><span id="nat_pool_websrv" class="unused_pointee">ip nat pool <span class="pointed_at">websrv</span> 10.10.10.60 10.10.10.60 netmask 255.255.255.0</span>
 ip nat inside source list <a href="#acl_1">1</a> interface <a href="#interface_FastEthernet4">FastEthernet4</a> overload
 ip nat inside source static tcp 10.10.10.40 53322 interface <a href="#interface_FastEthernet4">FastEthernet4</a> 53322
 ip nat inside source static udp 10.10.10.40 53322 interface <a href="#interface_FastEthernet4">FastEthernet4</a> 53322
@@ -604,6 +604,7 @@ end
 <a href="#dhcp_pool_ccp-pool">Dhcp_pool</a>
 <a href="#interface_FastEthernet0">Interface</a>
 <a href="#ip_port_map_user-protocol--2">Ip_port_map</a>
+<a href="#nat_pool_websrv">Nat_pool</a>
 <a href="#parameter_map_ccp-regex-nonascii">Parameter_map</a>
 <a href="#policy_map_ccp-permit-icmpreply">Policy_map</a>
 <br>
@@ -616,6 +617,7 @@ end
 <br><h4><u>Unused Pointees</u></h4>
 <a href="#acl_web">acl_web</a>
 <a href="#dhcp_pool_ccp-pool">dhcp_pool_ccp-pool</a>
+<a href="#nat_pool_websrv">nat_pool_websrv</a>
 <a href="#parameter_map_ccp-regex-nonascii">parameter_map_ccp-regex-nonascii</a>
 <a href="#policy_map_ccp-action-app-http">policy_map_ccp-action-app-http</a>
 <a href="#policy_map_ccp-inspect">policy_map_ccp-inspect</a>

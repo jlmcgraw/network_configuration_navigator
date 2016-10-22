@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <title>     
-            html_test_case_1.cfg
+            ./examples/html_test_case_1.cfg
         </title>
         <style>
             a {
@@ -318,7 +318,8 @@ ip ssh version 2
  service-policy output <a href="#policy_map_SHAPE">SHAPE</a>
 !
 <br><span id="routing_process_eigrp 100" class="">router eigrp 100</span>
- network 10.2.1.1 0.0.0.0
+<details><summary> network 10.2.1.1 0.0.0.0</summary>
+<span class="remark_subtle"> ! 1 interface on 10.2.1.1/32: <a href="html_test_case_1.cfg.html#interface_Loopback0">html_test_case_1-Loopback0</a></span></details>
  redistribute <a href="#routing_process_bgp 65000">bgp 65000</a> route-map <a href="#route_map_MATCH_DEFAULT">MATCH_DEFAULT</a>
  passive-interface default
  <span class="deny">no passive-interface <a href="#interface_GigabitEthernet0/0">GigabitEthernet0/0</a></span>
