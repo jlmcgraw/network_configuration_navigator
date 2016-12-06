@@ -116,18 +116,18 @@
 
     },
     'community_list' => {
-    1 =>
-        qr/(?<unique_id> ^ \s* 
-                ip \s+ 
-                community-list \s+ 
-                (?:standard|extended|expanded) \s+ 
-                (?<pointed_at> $valid_cisco_name) )
-                /ixsm,
-    2 => qr/(?<unique_id> ^ \s*
-                        ip \s+
-                        extcommunity-list \s+
-                        (?:standard|extended) \s+
-                        (?<pointed_at> $valid_cisco_name) )/ixsm,
+        1 =>
+            qr/(?<unique_id> ^ \s* 
+                    ip \s+ 
+                    community-list \s+ 
+                    (?:standard|extended|expanded) \s+ 
+                    (?<pointed_at> $valid_cisco_name) )
+                    /ixsm,
+        2 => qr/(?<unique_id> ^ \s*
+                            ip \s+
+                            extcommunity-list \s+
+                            (?:standard|extended) \s+
+                            (?<pointed_at> $valid_cisco_name) )/ixsm,
     },
     'as_path_access_list' => {
     1 => qr/(?<unique_id> ^ \s*

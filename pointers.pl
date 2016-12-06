@@ -255,29 +255,24 @@
            /ixsm,
     },
     'community_list' => {
-    1 => qr/^ \s*
-            match \s+
-            extcommunity \s+
-            (?<points_to> $list_of_pointees_ref->{"community_list"})
-            \s* $
-            /ixsm,
-    2 => qr/^ \s*
-            match \s+
-            community \s+
-            (?<points_to> $list_of_pointees_ref->{"community_list"})
-            \s* $
-            /ixsm,
+        '1_list' => qr/^ \s*
+                match \s+
+                (?:extcommunity|community) \s+
+                (?<points_to> 
+                    (?: $list_of_pointees_ref->{"community_list"} | \s )+ )    #This can be a list of things
+                                                                                         #separated by whitespace
+                /ixsm,
     },
     'as_path_access_list' => {
-    1 =>
-        qr/^ \s* neighbor \s+ $RE{net}{IPv4} \s+ filter-list \s+ (?<points_to> $list_of_pointees_ref->{"as_path_access_list"}) \s+ (?:in|out)$/ixsm,
+        1 =>
+            qr/^ \s* neighbor \s+ $RE{net}{IPv4} \s+ filter-list \s+ (?<points_to> $list_of_pointees_ref->{"as_path_access_list"}) \s+ (?:in|out)$/ixsm,
 
-    '2_list' => qr/^ \s*
-            match \s+
-            as-path \s+
-            (?<points_to> (?: $list_of_pointees_ref->{"as_path_access_list"} | \s )+ )                #This can be a list of things
-                                                                                         #separated by whitespace
-            \s* $/ixsm,
+        '2_list' => qr/^ \s*
+                match \s+
+                as-path \s+
+                (?<points_to> (?: $list_of_pointees_ref->{"as_path_access_list"} | \s )+ )                #This can be a list of things
+                                                                                            #separated by whitespace
+                \s* $/ixsm,
 
     },
     'interface' => {

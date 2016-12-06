@@ -401,10 +401,10 @@ sub construct_lists_of_pointees {
             #             else
             #                 { warn "Unknown command: `$cmd'; Try `help' next time\n" }
 
-            #Testing pointees with spaces in them
-            #BUG TODO REMOVE If issues with finding pointees and uncomment above method
-            #Please notice the use of ?-x to disable ignoring whitespace
-            #Add this label to our list
+            # Testing pointees with spaces in them
+            # BUG TODO REMOVE If issues with finding pointees and uncomment above method
+            # Please notice the use of ?-x to disable ignoring whitespace
+            # Add this label to our list
             push( @list_of_pointees,
                     '(?-x:'
                   . $pointees_seen_ref->{"$pointeeType"}{"$rule_number"}
@@ -532,14 +532,16 @@ sub config_to_html {
 
     #Find all pointees (things that are pointed TO) in this particular file
     my $found_pointees_ref = find_pointees( \@array_of_lines, $pointees_ref );
+    ### -----------------------found_pointees_ref-----------------------------------------------
     ### <file>[<line>]
-    ### found_pointees_ref
+    ### $found_pointees_ref
 
     #Construct "OR" lists (eg a|b|c|d) of the found pointees of each type for
     # using in the POINTER regexes to make them more explicit for this
     # particular file
     our $list_of_pointees_ref =
       construct_lists_of_pointees($found_pointees_ref);
+    ### ---------------------list_of_pointees_ref-------------------------------------------------
     ### <file>[<line>]
     ### $list_of_pointees_ref
 
@@ -1470,26 +1472,28 @@ sub add_pointer_links_to_line {
                     next;
                 }
 
-                #Save what we found for debugging
+                # Save what we found for debugging
                 $found_pointers_ref->{
                     "$line|$pointerType|$rule_number|$points_to"} =
                   "Points_to: $points_to | pointerType: $pointerType | RuleNumber: $rule_number";
 
-                #Save this for helping us determine which pointees have pointers referring to them
+                # Save this for helping us determine which pointees have pointers referring to them
                 $found_pointers_ref->{ "$pointerType" . '_' . "$points_to" } =
                   "$line";
 
                 my @fields;
 
-                #Does this specific rule support space separated lists?
+                # Does this specific rule support space separated lists?
                 if ( $rule_number =~ /_list/ix ) {
 
-                    #Split it up by whitespace
+                    # Split it up by whitespace
                     @fields = split( '\s+', $points_to );
-
+                    ### ------------------------------------fields-----------------------
+                    ### $points_to
+                    ### @fields
                 }
                 else {
-                    #Else treat the whole thing as one pointer
+                    # Else treat the whole thing as one pointer
                     push @fields, $points_to;
 
                 }
