@@ -232,7 +232,13 @@
 			source \s+
 			route-map \s+
             (?<points_to> $list_of_pointees_ref->{"route_map"})/ixsm,
-
+    13 => qr/^ \s*
+            eigrp \s+ 
+			stub \s+ 
+			.*
+			leak-map \s+
+            (?<points_to> $list_of_pointees_ref->{"route_map"})/ixsm,
+            
 
     },
 
