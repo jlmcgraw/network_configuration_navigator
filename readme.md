@@ -18,7 +18,7 @@
 	point out items that are defined but never used
 
 	e.g.:
-		./iosToHtml.pl -e -h -f -s ./sample_configs/*.cfg
+		./network_configuration_navigator.pl -e -h -f -s ./sample_configs/*.cfg
 		
 	Items highlighted in orange are unused in this config
 	
