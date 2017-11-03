@@ -1,4 +1,4 @@
-#NETWORK CONFIGURATION NAVIGATOR
+# NETWORK CONFIGURATION NAVIGATOR
 
 	To get started:
 		./setup.sh   
@@ -6,7 +6,7 @@
 	This will install cpanminus and carton globally and then install various perl 
 	libraries locally
 
-##network_configuration_navigator.pl
+## network_configuration_navigator.pl
 	Convert an IOS/NXOS/ACE/ASA config file into basic HTML, creating links 
 	between commands referencing lists and that list (e.g. access lists, 
 	route maps, prefix lists, service-policies etc etc).
