@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="UTF-8">
+        <title>     
+            ./examples/cisco_mpls_example/Pauillac.cfg
+        </title>
+        <style>
+            a {
+            text-decoration:none;
+            }
+            a:link, a:visited {
+                color:blue;
+                }
+            a:hover, a:visited:hover {
+                color: white;
+                background-color: blue;
+                }
+            :target {
+                background-color: #ffa;
+                }
+            .pointee {
+                font-weight: bold;
+                }
+            .unused_pointee {
+                color: white;
+                background-color:orange
+                }
+            .pointed_at {
+                font-style: italic;
+                }
+            .deny {
+                color: red;
+                }
+            .permit {
+                color: green;
+                }
+            .remark {
+                font-style: italic;
+                }
+            .remark_subtle {
+                font-style: italic;
+                opacity: .40;
+                }
+            .to_top_label{
+                position: fixed; 
+                top:10px;
+                right:10px;
+                color: white;
+                background-color: Blue;
+                text-decoration:none
+                }
+            div.floating-menu {
+                opacity: .90;
+                position:fixed;
+                top:10px;
+                right:10px;
+                background:#fff4c8;
+                padding:5px;
+                z-index:100;
+                }
+            div.floating-menu a, div.floating-menu h3, div.floating-menu h4 {
+                text-align: right;
+                text-decoration:none;
+                display:block;
+                margin:0 0.5em;
+                }
+            div.floating-menu a:hover {
+                color: white;
+                }
+            div.floating-menu .unused_pointee, div.floating-menu .pointee,  
+            div.floating-menu .remark,  div.floating-menu .deny,  
+            div.floating-menu .permit {
+                text-align: right;
+                display:block;
+                }
+        </style>
+    </head>
+    <body>
+        <pre>
+! https://www.cisco.com/c/en/us/support/docs/multiprotocol-label-switching-mpls/mpls/13733-mpls-vpn-basic.html
+!
+version 12.1
+!
+hostname pauillac
+!
+ip cef
+!
+<br><span id="interface_Loopback0" class="">interface <span class="pointed_at">Loopback0</span></span>
+ ip address 10.10.10.1 255.255.255.255
+ ip router <a href="#routing_process_isis">isis</a>
+!
+<br><span id="interface_Serial0/0" class="">interface <span class="pointed_at">Serial0/0</span></span>
+ no ip address
+ encapsulation frame-relay
+ no ip mroute-cache
+ tag-switching ip
+ no fair-queue
+!
+<br><span id="interface_Serial0/0.1" class="">interface <span class="pointed_at">Serial0/0.1</span> point-to-point</span>
+ description link to Pomerol
+ bandwith 512
+ ip address 10.1.1.1 255.255.255.252
+<span class="remark_subtle"> ! 1 PEER on 10.1.1.0/30: <a href="Pulligny.cfg.html#interface_Serial0/1.1">Pulligny</a></span>
+ ip router <a href="#routing_process_isis">isis</a>
+ tag-switching ip
+ frame-relay interface-dlci 102
+!
+<br><span id="interface_Serial0/0.2" class="">interface <span class="pointed_at">Serial0/0.2</span> point-to-point</span>
+ description link to Pulligny ip address 10.1.1.5 255.255.255.252
+ ip router <a href="#routing_process_isis">isis</a>
+ tag-switching ip
+ frame-relay interface-dlci 103
+!
+<br><span id="interface_Serial0/0.3" class="">interface <span class="pointed_at">Serial0/0.3</span> point-to-point</span>
+ description link to Pescara
+ bandwidth 512
+ ip address 10.1.1.13 255.255.255.252
+<span class="remark_subtle"> ! 1 PEER on 10.1.1.12/30: <a href="Pescara.cfg.html#interface_Serial2/0.1">Pescara</a></span>
+ ip router <a href="#routing_process_isis">isis</a>
+ tag-switching ip
+ frame-relay interface-dlci 104
+!
+<br><span id="routing_process_isis" class="pointee">router <span class="pointed_at">isis</span></span>
+ net 49.0001.0000.0000.0001.00
+ is-type level-1
+!
+ip classless
+!
+end
+        </pre>
+        <div class="floating-menu">
+    <h3>pauillac (Pauillac.cfg)</h3>
+    <a href="#">Top</a>
+    <br>
+    <h4><u>Beginnings of Sections</u></h4>
+<a href="#interface_Loopback0">Interface</a>
+<a href="#routing_process_isis">Routing_process</a>
+<br>
+<h4><u>Key</u></h4>
+<span class="unused_pointee">Unused Pointee</span>
+<span class="pointee">Used Pointee</span>
+<span class="deny">Deny/No</span>
+<span class="permit">Permit/Included</span>
+<span class="remark">Remark/Description</span>
+</div>
+    </body>
+</html>

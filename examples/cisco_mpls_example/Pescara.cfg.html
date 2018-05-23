@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="UTF-8">
+        <title>     
+            ./examples/cisco_mpls_example/Pescara.cfg
+        </title>
+        <style>
+            a {
+            text-decoration:none;
+            }
+            a:link, a:visited {
+                color:blue;
+                }
+            a:hover, a:visited:hover {
+                color: white;
+                background-color: blue;
+                }
+            :target {
+                background-color: #ffa;
+                }
+            .pointee {
+                font-weight: bold;
+                }
+            .unused_pointee {
+                color: white;
+                background-color:orange
+                }
+            .pointed_at {
+                font-style: italic;
+                }
+            .deny {
+                color: red;
+                }
+            .permit {
+                color: green;
+                }
+            .remark {
+                font-style: italic;
+                }
+            .remark_subtle {
+                font-style: italic;
+                opacity: .40;
+                }
+            .to_top_label{
+                position: fixed; 
+                top:10px;
+                right:10px;
+                color: white;
+                background-color: Blue;
+                text-decoration:none
+                }
+            div.floating-menu {
+                opacity: .90;
+                position:fixed;
+                top:10px;
+                right:10px;
+                background:#fff4c8;
+                padding:5px;
+                z-index:100;
+                }
+            div.floating-menu a, div.floating-menu h3, div.floating-menu h4 {
+                text-align: right;
+                text-decoration:none;
+                display:block;
+                margin:0 0.5em;
+                }
+            div.floating-menu a:hover {
+                color: white;
+                }
+            div.floating-menu .unused_pointee, div.floating-menu .pointee,  
+            div.floating-menu .remark,  div.floating-menu .deny,  
+            div.floating-menu .permit {
+                text-align: right;
+                display:block;
+                }
+        </style>
+    </head>
+    <body>
+        <pre>
+! https://www.cisco.com/c/en/us/support/docs/multiprotocol-label-switching-mpls/mpls/13733-mpls-vpn-basic.html
+!
+version 12.2
+!
+hostname Pescara
+!
+ip cef
+!
+!--- Customer A commands.
+<br><span id="vrf_Customer_A" class="pointee">ip vrf <span class="pointed_at">Customer_A</span></span>
+!--- Enables the VPN routing and forwarding (VRF) routing table.
+!--- This command can be used in global or
+!--- router configuration mode.
+ rd 100:110
+!--- Route distinguisher creates routing and forwarding
+!--- tables for a VRF.
+ route-target export 100:1000
+!--- Creates lists of import and export route-target extended
+!--- communities for the specified VRF.
+ route-target import 100:1000
+!
+!--- Customer B commands.
+<br><span id="vrf_Customer_B" class="pointee">ip vrf <span class="pointed_at">Customer_B</span></span>
+ rd 100:120
+ route-target export 100:2000
+ route-target import 100:2000
+!
+<br><span id="interface_Loopback0" class="pointee">interface <span class="pointed_at">Loopback0</span></span>
+ ip address 10.10.10.4 255.255.255.255
+ ip router <a href="#routing_process_isis">isis</a>
+!--- Customer A commands.
+<br><span id="interface_Loopback101" class="">interface <span class="pointed_at">Loopback101</span></span>
+ ip vrf forwarding <a href="#vrf_Customer_A">Customer_A</a>
+!--- Associates a VRF instance with an interface or subinterface.
+ ip address 200.0.4.1 255.255.255.0
+!--- Loopback101 and 102 use the same IP address, 200.0.4.1.
+!--- This is allowed because they belong to two
+!--- different customers' VRFs.
+ no ip directed-broadcast
+!
+!--- Customer B commands.
+<br><span id="interface_Loopback102" class="">interface <span class="pointed_at">Loopback102</span></span>
+ ip vrf forwarding <a href="#vrf_Customer_B">Customer_B</a>
+ ip address 200.0.4.1 255.255.255.0
+!--- Loopback101 and 102 use the same IP address, 200.0.4.1.
+!--- This is allowed because they belong to two
+!--- different customers' VRFs.
+ no ip directed-broadcast
+!
+<br><span id="interface_Serial2/0" class="">interface <span class="pointed_at">Serial2/0</span></span>
+ no ip address
+ no ip directed-broadcast
+ encapsulation frame-relay
+ no fair-queue
+!
+<br><span id="interface_Serial2/0.1" class="">interface <span class="pointed_at">Serial2/0.1</span> point-to-point</span>
+ description link to Pauillac
+ bandwidth 512
+ ip address 10.1.1.14 255.255.255.252
+<span class="remark_subtle"> ! 1 PEER on 10.1.1.12/30: <a href="Pauillac.cfg.html#interface_Serial0/0.3">Pauillac</a></span>
+ no ip directed-broadcast
+ ip router <a href="#routing_process_isis">isis</a>
+ tag-switching ip
+ frame-relay interface-dlci 401
+!
+<br><span id="routing_process_isis" class="pointee">router <span class="pointed_at">isis</span></span>
+ net 49.0001.0000.0000.0004.00
+ is-type level-1
+!
+<br><span id="routing_process_bgp 100" class="">router bgp 100</span>
+ bgp log-neighbor-changes
+!--- Enables logging of BGP neighbor resets.
+ neighbor <a href="Pesaro.cfg.html#interface_Loopback0" title="Pesaro">10.10.10.6</a> remote-as 100
+!--- Adds an entry to the BGP or multiprotocol BGP neighbor table.
+ neighbor <a href="Pesaro.cfg.html#interface_Loopback0" title="Pesaro">10.10.10.6</a> update-source <a href="#interface_Loopback0">Loopback0</a>
+!--- Enables BGP sessions to use a specific operational
+!--- interface for TCP connections.
+!
+!--- Customer A and B commands.
+ address-family vpnv4
+!--- To enter address family configuration mode
+!--- for configuring routing sessions, such as BGP,
+!--- that use standard VPN version 4 address prefixes.
+ neighbor <a href="Pesaro.cfg.html#interface_Loopback0" title="Pesaro">10.10.10.6</a> activate
+ neighbor <a href="Pesaro.cfg.html#interface_Loopback0" title="Pesaro">10.10.10.6</a> send-community both
+!--- Sends the community attribute to a BGP neighbor.
+ exit-address-family
+ !
+!--- Customer B commands.
+ address-family ipv4 vrf <a href="#vrf_Customer_B">Customer_B</a>
+!--- To enter address family configuration mode
+!--- for configuring routing sessions, such as BGP,
+!--- that use standard VPN version 4 address prefixes.
+  redistribute connected
+  no auto-summary
+  no synchronization
+  exit-address-family
+ !
+!--- Customer A commands.
+ address-family ipv4 vrf <a href="#vrf_Customer_A">Customer_A</a>
+  redistribute connected
+  no auto-summary
+  no synchronization
+  exit-address-family
+!
+ip classless
+!
+end
+        </pre>
+        <div class="floating-menu">
+    <h3>Pescara (Pescara.cfg)</h3>
+    <a href="#">Top</a>
+    <br>
+    <h4><u>Beginnings of Sections</u></h4>
+<a href="#interface_Loopback0">Interface</a>
+<a href="#routing_process_isis">Routing_process</a>
+<a href="#vrf_Customer_A">Vrf</a>
+<br>
+<h4><u>Key</u></h4>
+<span class="unused_pointee">Unused Pointee</span>
+<span class="pointee">Used Pointee</span>
+<span class="deny">Deny/No</span>
+<span class="permit">Permit/Included</span>
+<span class="remark">Remark/Description</span>
+</div>
+    </body>
+</html>

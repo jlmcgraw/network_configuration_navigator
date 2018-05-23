@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="UTF-8">
+        <title>     
+            ./examples/cisco_mpls_example/Pesaro.cfg
+        </title>
+        <style>
+            a {
+            text-decoration:none;
+            }
+            a:link, a:visited {
+                color:blue;
+                }
+            a:hover, a:visited:hover {
+                color: white;
+                background-color: blue;
+                }
+            :target {
+                background-color: #ffa;
+                }
+            .pointee {
+                font-weight: bold;
+                }
+            .unused_pointee {
+                color: white;
+                background-color:orange
+                }
+            .pointed_at {
+                font-style: italic;
+                }
+            .deny {
+                color: red;
+                }
+            .permit {
+                color: green;
+                }
+            .remark {
+                font-style: italic;
+                }
+            .remark_subtle {
+                font-style: italic;
+                opacity: .40;
+                }
+            .to_top_label{
+                position: fixed; 
+                top:10px;
+                right:10px;
+                color: white;
+                background-color: Blue;
+                text-decoration:none
+                }
+            div.floating-menu {
+                opacity: .90;
+                position:fixed;
+                top:10px;
+                right:10px;
+                background:#fff4c8;
+                padding:5px;
+                z-index:100;
+                }
+            div.floating-menu a, div.floating-menu h3, div.floating-menu h4 {
+                text-align: right;
+                text-decoration:none;
+                display:block;
+                margin:0 0.5em;
+                }
+            div.floating-menu a:hover {
+                color: white;
+                }
+            div.floating-menu .unused_pointee, div.floating-menu .pointee,  
+            div.floating-menu .remark,  div.floating-menu .deny,  
+            div.floating-menu .permit {
+                text-align: right;
+                display:block;
+                }
+        </style>
+    </head>
+    <body>
+        <pre>
+! https://www.cisco.com/c/en/us/support/docs/multiprotocol-label-switching-mpls/mpls/13733-mpls-vpn-basic.html
+!
+version 12.1
+!
+hostname Pesaro
+!
+!--- Customer A commands.
+<br><span id="vrf_Customer_A" class="pointee">ip vrf <span class="pointed_at">Customer_A</span></span>
+ rd 100:110
+ route-target export 100:1000
+ route-target import 100:1000
+!
+!--- Customer B commands.
+<br><span id="vrf_Customer_B" class="pointee">ip vrf <span class="pointed_at">Customer_B</span></span>
+ rd 100:120
+ route-target export 100:2000
+ route-target import 100:2000
+!
+ip cef
+!
+<br><span id="interface_Loopback0" class="pointee">interface <span class="pointed_at">Loopback0</span></span>
+ ip address 10.10.10.6 255.255.255.255
+ ip router <a href="#routing_process_isis">isis</a>
+!--- Customer A commands.
+<br><span id="interface_Loopback101" class="">interface <span class="pointed_at">Loopback101</span></span>
+ ip vrf forwarding <a href="#vrf_Customer_A">Customer_A</a>
+ ip address 200.0.6.1 255.255.255.0
+!
+!--- Customer B commands.
+<br><span id="interface_Loopback102" class="">interface <span class="pointed_at">Loopback102</span></span>
+ ip vrf forwarding <a href="#vrf_Customer_B">Customer_B</a>
+ ip address 200.0.6.1 255.255.255.0
+!
+!--- Customer A commands.
+<br><span id="interface_Loopback111" class="">interface <span class="pointed_at">Loopback111</span></span>
+ ip vrf forwarding <a href="#vrf_Customer_A">Customer_A</a>
+ ip address 200.1.6.1 255.255.255.0
+!
+<br><span id="interface_Serial0/0" class="">interface <span class="pointed_at">Serial0/0</span></span>
+ no ip address
+ encapsulation frame-relay
+ no ip mroute-cache
+ random-detect
+!
+<br><span id="interface_Serial0/0.1" class="">interface <span class="pointed_at">Serial0/0.1</span> point-to-point</span>
+ description link to Pomerol
+ bandwidth 512
+ ip address 10.1.1.22 255.255.255.252
+<span class="remark_subtle"> ! 1 PEER on 10.1.1.20/30: <a href="Pomerol.cfg.html#interface_Serial0/1.3">Pomerol</a></span>
+ ip router <a href="#routing_process_isis">isis</a>
+ tag-switching ip
+ frame-relay interface-dlci 603
+!
+<br><span id="routing_process_isis" class="pointee">router <span class="pointed_at">isis</span></span>
+ net 49.0001.0000.0000.0006.00
+ is-type level-1
+!
+<br><span id="routing_process_bgp 100" class="">router bgp 100</span>
+ neighbor <a href="Pescara.cfg.html#interface_Loopback0" title="Pescara">10.10.10.4</a> remote-as 100
+ neighbor <a href="Pescara.cfg.html#interface_Loopback0" title="Pescara">10.10.10.4</a> update-source <a href="#interface_Loopback0">Loopback0</a>
+ !
+!--- Customer B commands.
+ address-family ipv4 vrf <a href="#vrf_Customer_B">Customer_B</a>
+  redistribute connected
+  no auto-summary
+  no synchronization
+ exit-address-family
+ !
+!--- Customer A commands.
+ address-family ipv4 vrf <a href="#vrf_Customer_A">Customer_A</a>
+  redistribute connected
+  no auto-summary
+  no synchronization
+ exit-address-family
+ !
+!--- Customer A and B commands.
+ address-family vpnv4
+  neighbor <a href="Pescara.cfg.html#interface_Loopback0" title="Pescara">10.10.10.4</a> activate
+  neighbor <a href="Pescara.cfg.html#interface_Loopback0" title="Pescara">10.10.10.4</a> send-community both
+ exit-address-family
+!
+ip classless
+!
+end
+        </pre>
+        <div class="floating-menu">
+    <h3>Pesaro (Pesaro.cfg)</h3>
+    <a href="#">Top</a>
+    <br>
+    <h4><u>Beginnings of Sections</u></h4>
+<a href="#interface_Loopback0">Interface</a>
+<a href="#routing_process_isis">Routing_process</a>
+<a href="#vrf_Customer_A">Vrf</a>
+<br>
+<h4><u>Key</u></h4>
+<span class="unused_pointee">Unused Pointee</span>
+<span class="pointee">Used Pointee</span>
+<span class="deny">Deny/No</span>
+<span class="permit">Permit/Included</span>
+<span class="remark">Remark/Description</span>
+</div>
+    </body>
+</html>
