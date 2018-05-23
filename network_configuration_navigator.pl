@@ -21,7 +21,7 @@
 # along with this program.  If not, see [http://www.gnu.org/licenses/].
 #-------------------------------------------------------------------------------
 
-#TODO
+# TODO
 # External pointer lists
 #   eg
 #        set ip next-hop 10.1.192.1 10.1.192.9
@@ -44,13 +44,13 @@
 #       2) Items that have same indent level (eg interfaces)
 #       3) Groups of #1 or #2
 
-#BUGS
+# BUGS
 #   wrong link location (finds first match) when pointed_to occurs twice in string
 #       eg: standby 1 track 1 decrement 10
 #       Would be fixed by having identifiers with spaces in them
 #       eg "track 1" instead of "1"
 
-#DONE
+# DONE
 #   Maybe should regenerate overall host info hash each run?
 #   Make this work as CGI
 #   Match a list of referenced items which correct link for each
@@ -61,7 +61,7 @@
 #         "ospf 10"
 #         "sip-profiles 1"
 #
-#Standard modules
+# Standard modules
 use strict;
 use warnings;
 use autodie;
@@ -78,10 +78,10 @@ use Data::Dumper;
 use Carp;
 use Fcntl qw/ :flock /;
 
-#Look into using this so users don't need to install modules
+# Look into using this so users don't need to install modules
 use lib "$FindBin::Bin/local/lib/perl5";
 
-#Non-core additional modules
+# Non-core additional modules
 use Modern::Perl '2014';
 use Regexp::Common;
 use NetAddr::IP;
@@ -89,7 +89,7 @@ use Number::Bytes::Human qw(format_bytes);
 use Number::Format qw(:subs :vars);
 use Params::Validate qw(:all);
 
-#Smart_Comments=1 perl my_script.pl to show smart comments
+# Smart_Comments=1 perl my_script.pl to show smart comments
 use Smart::Comments -ENV;
 use Sys::CpuAffinity;
 
@@ -100,41 +100,41 @@ use Hash::Merge qw(merge);
 # The sort routine for Data::Dumper
 $Data::Dumper::Sortkeys = sub {
 
-    #Get all the keys for this hash
+    # Get all the keys for this hash
     my $keys = join '', keys %{ $_[0] };
 
-    #Are they only numbers?
+    # Are they only numbers?
     if ( $keys =~ /^ [[:alnum:]]+ $/x ) {
 
         #Sort keys numerically
         return [ sort { $a <=> $b or $a cmp $b } keys %{ $_[0] } ];
     }
     else {
-        #Keys are not all numeric so sort by alphabetically
+        # Keys are not all numeric so sort by alphabetically
         return [ sort { lc $a cmp lc $b } keys %{ $_[0] } ];
     }
 };
 
-#Use this to not print warnings
+# Use this to not print warnings
 # no if $] >= 5.018, warnings => "experimental";
 
-#Define the valid command line options
+# Define the valid command line options
 my $opt_string = 'ehfnsru';
 my $arg_num    = scalar @ARGV;
 
-#We need at least one argument
+# We need at least one argument
 if ( $arg_num < 1 ) {
     usage();
     exit(1);
 }
 
-#This will fail if we receive an invalid option
+# This will fail if we receive an invalid option
 unless ( getopts( "$opt_string", \%opt ) ) {
     usage();
     exit(1);
 }
 
-#Set variables from command line options
+# Set variables from command line options
 my (
     $should_link_externally,     $should_reformat_numbers,
     $should_do_extra_formatting, $dont_use_threads,
@@ -142,21 +142,21 @@ my (
     $should_write_unused_report
 ) = ( $opt{e}, $opt{h}, $opt{f}, $opt{n}, $opt{s}, $opt{r}, $opt{u} );
 
-#Hold a copy of the original ARGV so we can pass it instead of globbed version
-#to create_host_info_hashes
+# Hold a copy of the original ARGV so we can pass it instead of globbed version
+# to create_host_info_hashes
 my @ARGV_unmodified;
 
-#Expand wildcards on command line since windows doesn't do it for us
+# Expand wildcards on command line since windows doesn't do it for us
 if ( $Config{archname} =~ m/win/ix ) {
     use File::Glob ':bsd_glob';
 
-    #Expand wildcards on command line
+    # Expand wildcards on command line
     say "Expanding wildcards for Windows";
     @ARGV_unmodified = @ARGV;
     @ARGV = map { bsd_glob $_ } @ARGV;
 }
 
-#Call main routine
+# Call main routine
 exit main(@ARGV);
 
 sub main {
@@ -164,40 +164,40 @@ sub main {
     # start timer
     my $start = new Benchmark;
 
-    #What constitutes a valid name in IOS
-    #OUR because of using it in external regex files
-    #Could fine tune if I ever look up the list of valid characters
+    # What constitutes a valid name in IOS
+    # OUR because of using it in external regex files
+    # Could fine tune if I ever look up the list of valid characters
     our $valid_cisco_name = qr/ [\S]+ /isxm;
 
     my $hex_digits = qr/[A-F0-9]{8}/ix;
     our $cert_line = qr/(?: $hex_digits (?: \s+ | $ ) ){8}/ix;
 
-    #An octet
+    # An octet
     my $octetRegex = qr/(?: 25[0-5] | 2[0-4]\d | [01]?\d\d? )/mx;
 
-    #An IP address is made of octets
+    # An IPv4 address is made of octets
     our $ipv4AddressRegex = qr/$octetRegex\.
                                 $octetRegex\.
                                 $octetRegex\.
                                 $octetRegex/mx;
 
-    #The hashes of regexes have been moved to an external file to reduce clutter here
-    #Note that the keys/categories in pointers and pointees match (acl, route_map etc)
-    #This is so we can match them together properly
-    #You must keep pointers/pointees categories in sync if you add new ones
+    # The hashes of regexes have been moved to an external file to reduce clutter here
+    # NOTE that the keys/categories in pointers and pointees must match (acl, route_map etc)
+    # This is so we can pair them together properly
+    # You must keep pointers/pointees categories in sync if you add new ones
     #
-    #Note that we're using the path of the script to load the files ($Bin), in case
-    #you run it from some other directory
-    #Add a trailing /
+    # Note that we're using the path of the script to load the files ($Bin), in case
+    # you run it from some other directory
+    # Add a trailing /
     $Bin .= '/';
 
-    #load regexes for numbers we want to reformat
+    # Load regexes for numbers we want to reformat
     my %humanReadable = do $Bin . 'human_readable.pl';
 
-    #load regexes for the items that are pointed at ("pointees")
+    # Load regexes for the items that are pointed at ("pointees")
     my %pointees = do $Bin . 'pointees.pl';
 
-    #load regexes for redundancies we want to remove
+    # Load regexes for redundancies we want to remove
     my %redundancies = do $Bin . 'redundancies.pl';
 
     #     #Testing pre-compiling of regexes
@@ -213,22 +213,22 @@ sub main {
     #     print Dumper \%compiled_pointees;
     #     exit;
 
-    #load regexes for the items that may point to other files at ("external-pointers")
+    # Load regexes for the items that may point to other files at ("external-pointers")
     my %external_pointers = do $Bin . 'external_pointers.pl';
 
-    #A hash reference for information about all hosts in this run
+    # A hash reference for information about all hosts in this run
     my $host_info_ref = {};
 
-    #Try to retrieve host_info_hash if user wants to try linking between files
+    # Try to retrieve host_info_hash if user wants to try linking between files
     if ($should_link_externally) {
         $host_info_ref = create_external_host_info_hash();
     }
 
-    #Create the header of the unused pointee report
+    # Create the header of the unused pointee report
     if ($should_write_unused_report) {
         open my $filehandleHtml, '>', 'unused.html' or die $!;
 
-        #Print a simple html beginning to output
+        # Print a simple html beginning to output
         print $filehandleHtml <<"END";
 <!DOCTYPE html>
 <html>
@@ -265,7 +265,7 @@ END
     }
     $q->end();
 
-    #Return if there's no files to process
+    # Return if there's no files to process
     return 0 unless $q->pending();
 
     my $number_of_files_queued = $q->pending();
@@ -284,12 +284,12 @@ END
         }
     }
     else {
-        #Get the current number of CPUs
+        # Get the current number of CPUs
         my $num_cpus = Sys::CpuAffinity::getNumCpus();
 
-        #say "$num_cpus processors available";
+        # say "$num_cpus processors available";
 
-        #Create $main::num_cpus worker threads calling "config_to_html"
+        # Create $main::num_cpus worker threads calling "config_to_html"
         say "Using $num_cpus threads";
         my @thr = map {
             threads->create(
@@ -307,7 +307,7 @@ END
         $_->join() for @thr;
     }
 
-    #Close the unused report if we opened it
+    # Close the unused report if we opened it
     if ($unused_report_filehandle) {
         close $unused_report_filehandle;
     }
@@ -355,16 +355,16 @@ sub usage {
 
 sub construct_lists_of_pointees {
 
-    #Make a hash of lists, for each type of pointee, of what we've seen defined
-    #in this file so we can use them as part of the respective pointer regexes
+    # Make a hash of lists, for each type of pointee, of what we've seen defined
+    # in this file so we can use them as part of the respective pointer regexes
 
     my ($pointees_seen_ref) =
       validate_pos( @_, { type => HASHREF }, );
 
     my %pointees_list = ();
 
-    #Go through each type and save all of the pointees of that type that
-    # we've seen defined in this file
+    # Go through each type and save all of the pointees of that type that
+    #  we've seen defined in this file
     foreach my $pointeeType ( sort keys %{$pointees_seen_ref} ) {
 
         #         my $ra = Regexp::Assemble->new( flags => '-x' );
@@ -412,13 +412,13 @@ sub construct_lists_of_pointees {
 
         }
 
-        #Sort them by length, longest first
-        #This is done so stuff like COS2V will match COS2V instead of just COS2
+        # Sort them by length, longest first
+        # This is done so stuff like COS2V will match COS2V instead of just COS2
         # TODO Perhaps regex could also be changed to use \b
         @list_of_pointees = sort { length $b <=> length $a } @list_of_pointees;
 
-        #Make a list of those names joined by |
-        #This list is what will be used in the pointer regex (see pointers.pl)
+        # Make a list of those names joined by |
+        # This list is what will be used in the pointer regex (see pointers.pl)
         $pointees_list{$pointeeType} = join( ' | ', @list_of_pointees );
 
         #         @raw_list_of_pointees
@@ -436,18 +436,18 @@ sub construct_lists_of_pointees {
 
 sub find_pointees {
 
-    #Construct a hash of the types of pointees we've seen in this file
+    # Construct a hash of the types of pointees we've seen in this file
     my ( $array_of_lines_ref, $pointee_regex_ref ) =
       validate_pos( @_, { type => ARRAYREF }, { type => HASHREF } );
 
     my %foundPointees = ();
 
     foreach my $line (@$array_of_lines_ref) {
-
-        #Remove linefeeds
+        
+        # Remove linefeeds
         $line =~ s/\R//gx;
-
-        #Match it against our hash of pointees regexes
+        
+        # Match it against our hash of pointees regexes
         foreach my $pointeeType ( sort keys %{$pointee_regex_ref} ) {
             foreach my $rule_number (
                 sort keys %{ $pointee_regex_ref->{"$pointeeType"} } )
@@ -458,8 +458,8 @@ sub find_pointees {
                     my $unique_id  = $+{unique_id};
                     my $pointed_at = $+{pointed_at};
 
-                    #Have we seen this pointee already?
-                    #We only want to make a link pointer for the first occurrence
+                    # Have we seen this pointee already?
+                    # We only want to make a link pointer for the first occurrence
                     if ( !$foundPointees{$pointeeType}{$unique_id} ) {
                         $foundPointees{$pointeeType}{$unique_id} =
                           "$pointed_at";
@@ -469,6 +469,8 @@ sub find_pointees {
             }
         }
     }
+    
+    # Return a reference to the hash of pointees we found in this file
     return \%foundPointees;
 }
 
@@ -486,17 +488,19 @@ sub config_to_html {
       );
 
     my $subnet_regex_ref =
-      qr/(?: ^ \s+ ip \s+ address \s+ (?<ip_and_mask> $RE{net}{IPv4} \s+ $RE{net}{IPv4}) ) |
-                          (?: ^ \s+ ip \s+ address \s+ (?<ip_and_mask> $RE{net}{IPv4} \s* \/ \d+) )
-                        /ixsm;
+      qr/(?: ^ \s+ 
+            ip \s+ 
+            address \s+ 
+            (?<ip_and_mask> $RE{net}{IPv4} \s+ $RE{net}{IPv4}) ) |
+            (?: ^ \s+ ip \s+ address \s+ (?<ip_and_mask> $RE{net}{IPv4} \s* \/ \d+) )
+            /ixsm;
 
-    my $network_regex_ref = qr/(?: ^ \s+ 
+    my $network_regex_ref = 
+        qr/(?: ^ \s+ 
                 network \s+ 
-                (?<network> 
-                    $RE{net}{IPv4} ) \s+
+                (?<network> $RE{net}{IPv4} ) \s+
                 mask \s+
-                (?<mask> 
-                    $RE{net}{IPv4} )
+                (?<mask> $RE{net}{IPv4} )
             ) 
             /ixsm;
 
@@ -506,53 +510,67 @@ sub config_to_html {
             (?<wildcardmask> $RE{net}{IPv4} )
         ) 
         /ixsm;
+        
     my $network_masklength_regex_ref = qr/(?: ^ \s+ 
             network \s+ 
             (?<network> $RE{net}{IPv4} ) \/ (?<mask> \d{1,2} )
         ) 
         /ixsm;
 
-    #reset these for each file
+    # Reset these for each file
     my %foundPointers = ();
 
     #     my %foundPointees        = ();
     my %pointee_seen_in_file = ();
     my @html_formatted_text;
 
-    #Open the input and output files
+    # Open the input and output files
     open my $filehandle, '<', $filename or die $!;
 
-    #Read in the whole file
+    # Read in the whole file
     my @array_of_lines = <$filehandle>
       or die $!;    # Reads all lines into array
     close $filehandle;
 
-    #chomp the whole array in one fell swoop
+    # Chomp the whole array in one fell swoop
     chomp @array_of_lines;
 
-    #Find all pointees (things that are pointed TO) in this particular file
+    # Find all pointees (things that are pointed TO) in this particular file
     my $found_pointees_ref = find_pointees( \@array_of_lines, $pointees_ref );
+    
+    # Print via smart comments
     ### -----------------------found_pointees_ref-----------------------------------------------
     ### <file>[<line>]
     ### $found_pointees_ref
 
-    #Construct "OR" lists (eg a|b|c|d) of the found pointees of each type for
-    # using in the POINTER regexes to make them more explicit for this
-    # particular file
+    # Construct "OR" lists (eg a|b|c|d) of the found pointees of each type for
+    #  using in the POINTER regexes to make them more explicit for this
+    #  particular file
     our $list_of_pointees_ref =
       construct_lists_of_pointees($found_pointees_ref);
+    
+    # Print via smart comments
     ### ---------------------list_of_pointees_ref-------------------------------------------------
     ### <file>[<line>]
     ### $list_of_pointees_ref
 
-    #Load regexes for commands that refer to other lists of some sort
-    #NOTE THAT THESE ARE DYNAMICALLY CONSTRUCTED FOR EACH FILE BASED ON THE
-    #POINTEES WE FOUND IN IT ABOVE in "construct_lists_of_pointees"
+    # Load regexes for commands that refer to other lists of some sort
+    # NOTE THAT THESE ARE DYNAMICALLY CONSTRUCTED FOR EACH FILE BASED ON THE
+    # POINTEES WE FOUND IN IT ABOVE in "construct_lists_of_pointees"
     my %pointers = do $Bin . 'pointers.pl';
+    
+            # Load regexes for the items that may point to other files at ("external-pointers")
+            my %external_pointers = do $Bin . 'external_pointers.pl';    
+            $external_pointers_ref = \%external_pointers;
+            ### $external_pointers_ref
+            
+    my %negative_pointers = do $Bin . 'negative_pointers.pl';
 
-    #Delete pointers that have no possible pointees, hopefully speeding things
-    #up
+    # Delete pointers that have no possible pointees, hopefully speeding things
+    # up
     delete_pointers_with_no_pointees( \%pointers, $list_of_pointees_ref );
+    
+    # Print via smart comments
     ### <file>[<line>]
     ### %pointers
 
@@ -560,11 +578,11 @@ sub config_to_html {
     my $id = threads->tid();
     say "Thread $id: $filename";
 
-    #Search the whole file to find the hostname
+    # Search the whole file to find the hostname
     my ($hostname) =
       map { /^ \s* hostname \s+ (\S+) \b/ix ? $1 : () } @array_of_lines;
 
-    #If we didn't find a name set a default
+    # If we didn't find a name set a default
     $hostname //= 'no name';
 
     #     memoize('reformat_numbers');
@@ -574,48 +592,51 @@ sub config_to_html {
     #     memoize('find_subnet_peers');
     #     memoize('extra_formatting');
 
-    #Process each line, one at a time, of this file
+    # Process each line, one at a time, of this file
     foreach my $line (@array_of_lines) {
 
-        #Remove linefeeds
+        # Remove linefeeds
         $line =~ s/\R//gx;
 
-        #Remove trailing whitespace
+        # Remove trailing whitespace
         $line =~ s/\s+$//gx;
 
-        #Scrub passwords etc. if user requested
+#         # Look for pointers that point to undefined pointees
+#         $line = find_invalid_pointers_in_line ( $line, \%negative_pointers, \%foundPointers );
+        
+        # Scrub passwords etc. if user requested
         $line = scrub($line) if $should_scrub;
 
-        #Did user request to reformat some numbers?
+        # Did user request to reformat some numbers?
         $line = reformat_numbers( $line, $human_readable_ref )
           if $should_reformat_numbers;
 
-        #Add pointer links
-        $line = add_pointer_links_to_line( $line, \%pointers, \%foundPointers );
+        # Add pointer links
+        $line = add_pointer_links_to_line( $line, \%pointers, \%foundPointers, $list_of_pointees_ref);
 
-        #Remove some redundancy if user requested
+        # Remove some redundancy if user requested
         $line = remove_redundancy( $line, $redundancies_ref )
           if $should_remove_redundancy;
 
-        #Add pointee links
+        # Add pointee links
         $line = add_pointee_links_to_line( $line, $pointees_ref,
             $found_pointees_ref, \%pointee_seen_in_file, \%foundPointers );
 
-        #Did user request to try to link to external files?
+        # Did user request to try to link to external files?
         if ($should_link_externally) {
-
-            #Simple external links to one IP address
+            
+            # Simple external links to one IP address
             $line = process_external_pointers( $line,
                 $external_pointers_ref, $host_info_ref );
 
-            #Find the devices from this run with interfaces on the same subnet and list them
-            #as peers
+            # Find the devices from this run with interfaces on the same subnet and list them
+            # as peers
             $line = find_subnet_peers( $line, $filename,
                 $external_pointers_ref, $host_info_ref, $subnet_regex_ref );
         }
 
-        #Find the interfaces on this device that are relevant to a routing
-        # process
+        # Find the interfaces on this device that are relevant to a routing
+        #  process
         $line = find_routing_interfaces(
             $line,                  $filename,
             $external_pointers_ref, $host_info_ref,
@@ -623,41 +644,45 @@ sub config_to_html {
             $network_masklength_regex_ref
         );
 
-        #Some experimental formatting (colored permits/denies, comments are italic etc)
+        # Some experimental formatting (colored permits/denies, comments are italic etc)
         $line = extra_formatting($line) if $should_do_extra_formatting;
 
-        #Save the (possibly) modified line for later printing
+        # Save the (possibly) modified line for later printing
         push @html_formatted_text, $line;
     }
 
-    #Find any pointee that doesn't seem to have something pointing to it
-    #and change its CSS class
+    # Find any pointee that doesn't seem to have something pointing to it
+    # and change its CSS class
     my $config_as_html_ref =
       find_pointees_with_nothing_pointing_to_them( \@html_formatted_text );
 
-    #Construct the floating menu unique to this file
+    # Construct the floating menu unique to this file
     my $floating_menu_text =
       construct_floating_menu( $filename, \@html_formatted_text,
         $hostname, \%pointee_seen_in_file, $config_as_html_ref );
 
-    #Output as a web page
+    # Output as a web page
     output_as_html( $filename, \@html_formatted_text,
         $hostname, $floating_menu_text, $config_as_html_ref );
 
-    #Do we want to add to the global report of unused pointees?
+    # Do we want to add to the global report of unused pointees?
     if ($should_write_unused_report) {
         write_unused_pointee_report( $filename, $hostname,
             $config_as_html_ref );
     }
+    
+    # Print via smart comments
     ### <file>[<line>]
     ### %foundPointers
     ### %pointee_seen_in_file
+    ### $external_pointers_ref
+    
     return;
 }
 
 sub delete_pointers_with_no_pointees {
 
-    #Clean out pointers with no possible pointees
+    # Clean out pointers with no possible pointees
 
     my ( $pointers_ref, $list_of_pointees_ref ) =
       validate_pos( @_, { type => HASHREF }, { type => HASHREF }, );
@@ -665,7 +690,7 @@ sub delete_pointers_with_no_pointees {
     while ( my ( $rule_type, $rule_number ) = each %{$pointers_ref} ) {
         if ( !( exists $list_of_pointees_ref->{"$rule_type"} ) ) {
 
-            #say "$rule_type has no list";
+            # say "$rule_type has no list";
             delete $pointers_ref->{$rule_type};
         }
     }
@@ -675,35 +700,37 @@ sub find_pointees_with_nothing_pointing_to_them {
     my ( $html_formatted_text_ref, ) =
       validate_pos( @_, { type => ARRAYREF }, );
 
-    #Copy the array of html-ized test to a scalar
+    # Copy the array of html-ized test to a scalar
     my $config_as_html = join "\n", @$html_formatted_text_ref;
 
-    #Find the names of all the pointers and create a hash from it
+    # Find the names of all the pointers and create a hash from it
     my @array_of_pointers = $config_as_html =~ /<a href="#(.*?)">/g;
     my %pointers = map { $_, 1 } @array_of_pointers;
 
-    #Find the names of all the pointees and create a hash from it
+    # Find the names of all the pointees and create a hash from it
     my @array_of_pointees = $config_as_html =~ /id="(.*?)" class="pointee">/g;
     my %pointees = map { $_, 1 } @array_of_pointees;
 
-    #Delete every POINTEE that has a POINTER
+    # Delete every POINTEE that has a POINTER
     foreach my $pointer ( keys %pointers ) {
         if ( exists $pointees{$pointer} ) {
             delete $pointees{$pointer};
         }
     }
 
-    #At this point, pointees contains only things that haven't been pointed at
-    #So change their CSS class
+    # At this point, pointees contains only things that haven't been pointed at
+    # So change their CSS class
     foreach my $unused_pointee ( keys %pointees ) {
+        # This class is defined in the CSS
         my $class = 'unused_pointee';
 
-        #Ignore interfaces and routing processes since they don't get referred to quite often
+        # Ignore interfaces and routing processes since they don't get referred to quite often
         if ( $unused_pointee =~ /interface_|routing_/ix ) {
             $class = '';
         }
 
-        #Update this unused pointee's CSS class
+        # Update this unused pointee's CSS class
+        # BUG TODO Maybe this doesn't need to be a global search, since the pointee should just occur once
         $config_as_html =~
           s/id="$unused_pointee" class="pointee">/id="$unused_pointee" class="$class">/g;
     }
@@ -713,7 +740,7 @@ sub find_pointees_with_nothing_pointing_to_them {
 
 sub construct_floating_menu {
 
-    #Construct a menu from the pointees we've seen in this file
+    # Construct a menu from the pointees we've seen in this file
 
     my ( $filename, $html_formatted_text_ref, $hostname, $pointees_ref,
         $config_as_html_ref )
@@ -726,27 +753,27 @@ sub construct_floating_menu {
         { type => SCALARREF },
       );
 
-    #Construct a menu from the pointees we've seen in this file
+    # Construct a menu from the pointees we've seen in this file
     my $file_basename = basename($filename);
 
-    #First occurrence of each type of pointee
+    # First occurrence of each type of pointee
     my @first_occurence_of_pointees;
 
-    #Copy the array of html-ized text to a scalar
+    # Copy the array of html-ized text to a scalar
     my $config_as_html = join "", @$html_formatted_text_ref;
 
-    #for each pointee we found in this config
+    # for each pointee we found in this config
     foreach my $pointee_type ( sort keys %{$pointees_ref} ) {
 
-        #find only the first occurrence
+        # find only the first occurrence
         my $regex = qr/<span \s+ id="(?<type> $pointee_type .*? )"/x;
         $config_as_html =~ /$regex/ix;
 
-        #Save it
+        # Save it
         push @first_occurence_of_pointees, "$pointee_type|$+{type}";
     }
 
-    #First portion of the menu's HTML
+    # First portion of the menu's HTML
     my $menu_text = << "END_MENU";
 <div class="floating-menu">
     <h3>$hostname ($file_basename)</h3>
@@ -755,15 +782,15 @@ sub construct_floating_menu {
     <h4><u>Beginnings of Sections</u></h4>
 END_MENU
 
-    #Create a link for each type of pointee
+    # Create a link for each type of pointee
     map {
-        #Split up what we pushed earlier
+        # Split up what we pushed earlier
         my ( $type, $specific ) = split( '\|', $_ );
 
-        #Fix case on $type
+        # Fix case on $type
         $type = ucfirst $type;
 
-        #Construct the link
+        # Construct the link
         #         $menu_text .= "<div><a href=\"#$specific\" style=\"text-align: right\">$type</a>" . "</div>\n";
         $menu_text .= "<a href=\"#$specific\">$type</a>" . "\n";
     } @first_occurence_of_pointees;
@@ -776,7 +803,7 @@ END_MENU
     $menu_text .= '<span class="permit">Permit/Included</span>' . "\n";
     $menu_text .= '<span class="remark">Remark/Description</span>' . "\n";
 
-    #Regex for unused pointees
+    # Regex for unused pointees
     my $unused_pointee_regex = qr/
                                 <span 
                                 \s+ 
@@ -785,38 +812,38 @@ END_MENU
                                 class="unused_pointee"
                                 /ix;
 
-    #Construct a list of unused pointees
+    # Construct a list of unused pointees
     my (@list_of_unused_pointees) =
       $$config_as_html_ref =~ /$unused_pointee_regex/igx;
 
-    #If there actually are any unused pointees then add links to the floating menu
+    # If there actually are any unused pointees then add links to the floating menu
     if (@list_of_unused_pointees) {
 
-        #Sort the list alphabetically
+        # Sort the list alphabetically
         @list_of_unused_pointees = sort @list_of_unused_pointees;
 
         $menu_text .= '<br>';
         $menu_text .= '<h4><u>Unused Pointees</u></h4>' . "\n";
 
-        #Add links to each unused pointee to the floating menu
+        # Add links to each unused pointee to the floating menu
         map {
             my $pointee_id = $_;
 
-            #Append this link to the floating menu
+            # Append this link to the floating menu
             $menu_text .= "<a href=\"#$pointee_id\">$pointee_id</a>" . "\n";
         } @list_of_unused_pointees;
     }
 
-    #Close of the DIV in the html
+    # Close the DIV tag in the html
     $menu_text .= '</div>';
 
-    #Return the constructed text
+    # Return the constructed text
     return $menu_text;
 }
 
 sub write_unused_pointee_report {
 
-    #Create an HTML list of unused pointees in this file
+    # Create an HTML list of unused pointees in this file
 
     my ( $filename, $hostname, $config_as_html_ref ) = validate_pos(
         @_,
@@ -827,7 +854,7 @@ sub write_unused_pointee_report {
 
     my $file_basename = basename($filename);
 
-    #Regex for unused pointees
+    # Regex for unused pointees
     my $unused_pointee_regex = qr/
                                 <span 
                                 \s+ 
@@ -836,23 +863,23 @@ sub write_unused_pointee_report {
                                 class="unused_pointee"
                                 /ix;
 
-    #Construct a list of unused pointees
+    # Construct a list of unused pointees
     my (@list_of_unused_pointees) =
       $$config_as_html_ref =~ /$unused_pointee_regex/igx;
 
-    #If there actually are any unused pointees then add links to the report
+    # If there actually are any unused pointees then add links to the report
     if (@list_of_unused_pointees) {
 
-        #Add links to each unused pointee to the report
+        # Add links to each unused pointee to the report
         map {
             my $pointee_id = $_;
 
-            #Construct the HTML
+            # Construct the HTML
             my $external_link_text =
               "<a href=\"$filename.html#$pointee_id\">$hostname : $file_basename : $pointee_id</a><br>"
               . "\n";
 
-            #Write to the report file, thread safe
+            # Write to the report file, thread safe
             append_message_to_file( $external_link_text, 'unused.html' );
 
         } sort @list_of_unused_pointees;
@@ -874,7 +901,7 @@ sub output_as_html {
 
     open my $filehandleHtml, '>', $filename . '.html' or die $!;
 
-    #Print a simple html beginning to output
+    # Print a simple html beginning to output
     print $filehandleHtml <<"END";
 <!DOCTYPE html>
 <html>
@@ -963,7 +990,7 @@ END
     say {$filehandleHtml} $$config_as_html_ref;
 
     #say {$filehandleHtml} $line;
-    #Close out the file with very basic html ending
+    # Close out the file with very basic html ending
     print $filehandleHtml <<"END";
         </pre>
         $floating_menu_text
@@ -976,24 +1003,21 @@ END
 }
 
 sub process_external_pointers {
-
-    #Construct a menu from the pointees we've seen in this file
-
     my ( $line, $external_pointers_ref, $host_info_ref ) = validate_pos(
         @_,
         { type => SCALAR },
         { type => HASHREF },
         { type => HASHREF },
     );
-
-    #Match $line against our hash of EXTERNAL_POINTERS regexes
-    #add HTML link to matching lines
+    
+    # Match $line against our hash of EXTERNAL_POINTERS regexes
+    # add HTML link to matching lines
     foreach my $pointerType ( sort keys %{$external_pointers_ref} ) {
         foreach my $rule_number (
             sort keys %{ $external_pointers_ref->{"$pointerType"} } )
         {
 
-            #The while allows multiple pointers in one line
+            # The while allows multiple pointers in one line
             while ( $line =~
                 m/$external_pointers_ref->{"$pointerType"}{"$rule_number"}/xg )
             {
@@ -1005,11 +1029,11 @@ sub process_external_pointers {
                     my ( $file, $interface ) = split( ',',
                         $host_info_ref->{'ip_address'}{$neighbor_ip} );
 
-                    #Pull out the various filename components of the input file from the command line
+                    # Pull out the various filename components of the input file from the command line
                     my ( $filename, $dir, $ext ) =
                       fileparse( $file, qr/\.[^.]*/x );
 
-                    #Construct the text of the link
+                    # Construct the text of the link
                     my $linkText =
                         '<a href="'
                       . $filename
@@ -1017,8 +1041,8 @@ sub process_external_pointers {
                       . "interface_$interface"
                       . "\" title=\"$filename\">$neighbor_ip</a>";
 
-                    #Insert the link back into the line
-                    #Link point needs to be surrounded by whitespace or end of line
+                    # Insert the link back into the line
+                    # Link point needs to be surrounded by whitespace or end of line
                     $line =~ s/(\s+) $neighbor_ip (\s+|$)/$1$linkText$2/gx;
                 }
 
@@ -1030,26 +1054,26 @@ sub process_external_pointers {
 
 sub reformat_numbers {
 
-    #Make some numbers easier to read (add thousands separator etc)
+    # Make some numbers easier to read (add thousands separator etc)
     my ( $line, $human_readable_ref ) =
       validate_pos( @_, { type => SCALAR }, { type => HASHREF }, );
 
-    #Match it against our hash of number regexes
+    # Match it against our hash of number regexes
     foreach my $human_readable_key ( sort keys %{$human_readable_ref} ) {
 
-        #Did we find any matches? (number of captured items varies between the regexes)
+        # Did we find any matches? (number of captured items varies between the regexes)
         if ( my @matches =
             ( $line =~ $human_readable_ref->{"$human_readable_key"} ) )
         {
-            #For each match, reformat the number
+            # For each match, reformat the number
             foreach my $number (@matches) {
 
-                #Different ways to format the number, choose what you like
+                # Different ways to format the number, choose what you like
                 my $number_formatted = format_number($number);
 
                 #my $number_formatted = format_bytes($number);
 
-                #Replace the non-formatted number with the formmated one
+                # Replace the non-formatted number with the formmated one
                 $line =~ s/$number/$number_formatted/x;
             }
 
@@ -1071,25 +1095,25 @@ sub find_subnet_peers {
         { type => SCALARREF },
       );
 
-    #List devices on the same subnet when we know of them
+    # List devices on the same subnet when we know of them
     if ( $line =~ m/$subnet_regex_ref/ixms ) {
 
         my $ip_and_netmask = $+{ip_and_mask};
 
-        #Save the current amount of indentation of this line
-        #to make stuff we might insert line up right (eg PEERS)
+        # Save the current amount of indentation of this line
+        # to make stuff we might insert line up right (eg PEERS)
         my ($current_indent_level) = $line =~ m/^(\s*)/ixsm;
 
         #                      say $ip_and_mask;
 
-        #HACK In RIOS, there's a space between IP address and CIDR
-        #Remove that without hopefully causing other issues
+        # HACK In RIOS, there's a space between IP address and CIDR
+        # Remove that without hopefully causing other issues
         $ip_and_netmask =~ s|\s/|/|;
 
-        #Try to create a new NetAddr::IP object from this key
+        # Try to create a new NetAddr::IP object from this key
         my $subnet = NetAddr::IP->new($ip_and_netmask);
 
-        #If it worked...
+        # If it worked...
         if ($subnet) {
 
             #                             my $ip_addr        = $subnet->addr;
@@ -1102,12 +1126,12 @@ sub find_subnet_peers {
             #                             my $isRfc1918      = $subnet->is_rfc1918();
             #                             my $range          = $subnet->range();
 
-            #Do we know about this subnet via create_host_info_hashes?
+            # Do we know about this subnet via create_host_info_hashes?
             if ( exists $host_info_ref->{'subnet'}{$network} ) {
 
                 my @peer_array;
 
-                #TODO BUG Make this sort
+                # TODO BUG Make this sort
                 #                             while ( my ( $peer_file, $peer_interface )
                 #                                 = each
                 #                                 %{ $host_info_ref->{'subnet'}{$network} } )
@@ -1120,16 +1144,16 @@ sub find_subnet_peers {
                     my $peer_interface =
                       $host_info_ref->{'subnet'}{$network}{$peer_file};
 
-                    #Don't list ourself as a peer
+                    # Don't list ourself as a peer
                     if ( $our_filename =~ quotemeta $peer_file ) {
                         next;
                     }
 
-                    #Pull out the various filename components of the file
+                    # Pull out the various filename components of the file
                     my ( $peer_filename, $dir, $ext ) =
                       fileparse( $peer_file, qr/\.[^.]*/x );
 
-                    #Construct the text of the link
+                    # Construct the text of the link
                     my $linkText =
                         '<a href="'
                       . $peer_filename
@@ -1137,17 +1161,16 @@ sub find_subnet_peers {
                       . "interface_$peer_interface"
                       . "\">$peer_filename</a>";
 
-                    #And save that link
+                    # And save that link
                     push @peer_array, $linkText;
                 }
 
-                #Join them all together
+                # Join them all together
                 my $peer_list  = join( ' | ', @peer_array );
                 my $peer_count = @peer_array;
                 my $peer_form  = $peer_count > 1 ? "PEERS" : "PEER";
 
-                #And add them below the IP address line if there
-                #are any peers
+                # And add them below the IP address line if there are any peers
                 if ($peer_list) {
                     $line .= "\n"
                       . '<span class="remark_subtle">'
@@ -1183,7 +1206,7 @@ sub find_routing_interfaces {
 
     my ($subnet);
 
-    #For wildcard masks, convert to a prefix length
+    # For wildcard masks, convert to a prefix length
     if ( $line =~ m/$network_wildcard_regex_ref/ixms ) {
         my ( $network, $wildcard_mask );
         $network       = $+{network};
@@ -1191,18 +1214,18 @@ sub find_routing_interfaces {
 
         #         say "$network $wildcard_mask";
 
-        #Get the prefix length of this wildcard mask.
+        # Get the prefix length of this wildcard mask.
         # Works with non-contiguous masks
         my ( $prefix_length, $prefix_length_long ) =
           find_longest_subnet_mask_in_wildcard_mask($wildcard_mask);
 
-        #Create a new subnet object from captured info
+        # Create a new subnet object from captured info
         $subnet = NetAddr::IP->new("$network/$prefix_length");
 
         #         say "wildcard $network/$prefix_length";
     }
 
-    #List devices on the same subnet when we know of them
+    # List devices on the same subnet when we know of them
     if ( $line =~ m/$network_regex_ref/ixms ) {
         my ( $network, $mask );
 
@@ -1210,11 +1233,11 @@ sub find_routing_interfaces {
         $mask    = $+{mask};
 
         #         say "regular $network $mask";
-        #Try to create a new NetAddr::IP object from this key
+        # Try to create a new NetAddr::IP object from this key
         $subnet = NetAddr::IP->new("$network $mask");
     }
 
-    #List devices on the same subnet when we know of them
+    # List devices on the same subnet when we know of them
     if ( $line =~ m/$network_masklength_regex_ref/ixms ) {
         my ( $network, $mask );
 
@@ -1222,16 +1245,16 @@ sub find_routing_interfaces {
         $mask    = $+{mask};
 
         #         say "cidr $network $mask";
-        #Try to create a new NetAddr::IP object from this key
+        # Try to create a new NetAddr::IP object from this key
         $subnet = NetAddr::IP->new("$network/$mask");
     }
 
-    #If any of the above worked...
+    # If any of the above worked...
     if ($subnet) {
         my $peer_text;    #Holds the set of peers we find
 
-        #Save the current amount of indentation of this line
-        #to make stuff we might insert line up right (eg PEERS)
+        # Save the current amount of indentation of this line
+        # to make stuff we might insert line up right (eg PEERS)
         my ($current_indent_level) = $line =~ m/^(\s*)/ixsm;
 
         #                             my $ip_addr        = $subnet->addr;
@@ -1245,7 +1268,7 @@ sub find_routing_interfaces {
         #                             my $range          = $subnet->range();
         #         say "$network $masklen";
 
-        #Do we know about this subnet via create_host_info_hashes?
+        # Do we know about this subnet via create_host_info_hashes?
         #         foreach my $potential_network = $host_info_ref->{'subnet'}{$network} {
         foreach my $potential_network ( keys %{ $host_info_ref->{'subnet'} } ) {
 
@@ -1259,7 +1282,7 @@ sub find_routing_interfaces {
 
                 my @peer_array;
 
-                #TODO BUG Make this sort
+                # TODO BUG Make this sort
                 #                             while ( my ( $peer_file, $peer_interface )
                 #                                 = each
                 #                                 %{ $host_info_ref->{'subnet'}{$network} } )
@@ -1278,11 +1301,11 @@ sub find_routing_interfaces {
                     #                         next;
                     #                     }
 
-                    #Pull out the various filename components of the file
+                    # Pull out the various filename components of the file
                     my ( $peer_filename, $dir, $ext ) =
                       fileparse( $peer_file, qr/\.[^.]*/x );
 
-                    #Construct the text of the peer interface link
+                    # Construct the text of the peer interface link
                     my $linkText =
                         '<a href="'
                       . $peer_filename
@@ -1290,24 +1313,24 @@ sub find_routing_interfaces {
                       . "interface_$peer_interface"
                       . "\">$peer_filename-$peer_interface</a>";
 
-                    #And save that link
+                    # And save that link
                     push @peer_array, $linkText;
                 }
 
-                #Now join them all together
+                # Now join them all together
                 my $peer_list = join( ' | ', @peer_array );
 
-                #Are there any peers?
+                # Are there any peers?
                 if ($peer_list) {
 
-                    #How many are there?
+                    # ow many are there?
                     my $peer_count = @peer_array;
 
-                    #Pluralize if needed
+                    # Pluralize if needed
                     my $peer_form =
                       $peer_count > 1 ? "interfaces" : "interface";
 
-                    #And add them below the IP address line
+                    # And add them below the IP address line
                     $peer_text .= "\n"
                       . '<span class="remark_subtle">'
                       . "$current_indent_level! $peer_count $peer_form on $potential_network: $peer_list"
@@ -1317,6 +1340,8 @@ sub find_routing_interfaces {
                 }
             }
         }
+        
+        # If there are any peers, append the list after the current line
         if ($peer_text) {
             $line =
                 '<details>'
@@ -1328,43 +1353,46 @@ sub find_routing_interfaces {
         }
     }
 
+    # Return the (possibly modified) current line
     return $line;
 }
 
 sub extra_formatting {
     my ($line) = validate_pos( @_, { type => SCALAR }, );
 
-    #Style PERMIT lines
+    # Style PERMIT lines
     $line =~
       s/ (\s+) (permit)  ( \s+ .*? $  ) /$1<span class="permit">$2$3<\/span>/ixg;
 
-    #Style DENY lines
+    # Style DENY lines
     $line =~
       s/ (\s+) (deny) ( \s+ .*?  $ ) /$1<span class="deny">$2$3<\/span>/ixg;
 
-    #Style NO lines
+    # Style NO lines
     $line =~
       s/^( \s* ) (no) ( \s+  .*?  $ ) /$1<span class="deny">$2$3<\/span>/ixg;
 
-    #Style REMARK lines
+    # Style REMARK lines
     $line =~
       s/ (\s+) (remark|description) ( \s+ .*? $ ) /$1<span class="remark">$2$3<\/span>/ixg;
 
-    #Style CONFORM-ACTION lines
+    # Style CONFORM-ACTION lines
     $line =~
       s/ (\s+) (conform-action) ( \s+ .*? $ ) /$1<span class="permit">$2$3<\/span>/ixg;
 
-    #Style EXCEED-ACTION lines
+    # Style EXCEED-ACTION lines
     $line =~
       s/ (\s+) (exceed-action) ( \s+ .*? $ ) /$1<span class="deny">$2$3<\/span>/ixg;
 
-    #Style INCLUDE lines
+    # Style INCLUDE lines
     $line =~
       s/ (\s+) (included)  ( .*? $  ) /$1<span class="permit">$2$3<\/span>/ixg;
 
-    #Style EXCLUDE lines
+    # Style EXCLUDE lines
     $line =~
       s/ (\s+) (excluded) ( .*?  $ ) /$1<span class="deny">$2$3<\/span>/ixg;
+      
+    # Return the (possibly modified) current line
     return $line;
 }
 
@@ -1373,7 +1401,7 @@ sub scrub {
 
     #BUG TODO A quick hack to see if replacing "host x.x.x.x" with
     # x.x.x.x 0.0.0.0 looks any better
-    #     $line =~ s/host ($main::ipv4AddressRegex)/$1 0.0.0.0/gi;
+    $line =~ s/host ($main::ipv4AddressRegex)/$1 0.0.0.0/gi;
 
     $line =~ s/password .*/password SCRUBBED/gi;
     $line =~ s/secret .*/secret SCRUBBED/gi;
@@ -1391,6 +1419,7 @@ sub scrub {
     $line =~ s/$main::cert_line/SCRUBBED/gix;
     $line =~ s/\s+sn\s+\S+/ sn SCRUBBED/gix;
     $line =~ s/(crypto \s+ isakmp \s+ key) \s+ \S+/$1 SCRUBBED/gix;
+    $line =~ s/^ (\s+) key \s+ 7 \s+ (\S+) \s* $/$1 key 7 SCRUBBED/gix;
 
     return $line;
 }
@@ -1399,70 +1428,101 @@ sub remove_redundancy {
     my ( $line, $redundancies_ref ) =
       validate_pos( @_, { type => SCALAR }, { type => HASHREF }, );
 
+    # Maintain these variables between calls to this function
     state $last_line;
     state $match;
-
-    #For each of the things we consider potentially redundant/noisy
+    state $last_route_map;
+    
+    
+    # For each of the things we consider potentially redundant/noisy
     foreach my $key ( sort keys %{$redundancies_ref} ) {
+        # Get the regex
         my $redundancy_regex = $redundancies_ref->{$key};
 
-        #Does this line match?
+        # Does the current line match this regex?
         if ( $line =~ /$redundancy_regex/ ) {
 
-            #Collect what matched
+            # Collect what matched
             $match = $+{match};
 
-            #Does the last line also fully match (note the \b)?
+            # Does the last line also fully match (note the \b)?
             if ( $last_line =~ /^\s*$match\b/ ) {
 
-                #Save our unmodified line
+                # Save our unmodified line
                 $last_line = $line;
 
-                #Create a replacement string of the correct length
+                # Create a replacement string of the correct length
                 #  my $replacement_text = ' ' x length $match;
 
-                #Create a replacement string of the correct length
+                # Create a replacement string of the correct length
                 ( my $replacement_text = $match ) =~ s/\S/-/g;
 
-                #and substitute it back into the line
+                # and substitute it back into the line
                 ( my $modified_line = $line ) =~ s/$match/$replacement_text/;
 
-                #Return the modified line
+                # Return the modified line
                 return $modified_line;
             }
         }
     }
 
-    #Save the current line for the next iteration
+    # Save the current line for the next iteration
     $last_line = $line;
 
+    # A quick test for route-maps
+    # Is this line defining a route-map?
+        if ( $line =~ /^(?<match> route-map \s+ $main::valid_cisco_name)/ix ) {
+        
+            # Collect what matched
+            my $match = $+{match};
+            
+#             say "This is a route-map $match";
+            
+            # Have we already seen a line for this route-map before?
+            if ($match eq $last_route_map) {
+                # Create a replacement string of the correct length
+                ( my $replacement_text = $match ) =~ s/\S/-/g;
+#                  say "We've already seen $match";
+                # and substitute it back into the line
+                ( my $modified_line = $line ) =~ s/$match/$replacement_text/;
+                
+                
+                # Return the modified line
+                return $modified_line;
+                
+                }
+            # Update the route-map match with the current route-map name
+                $last_route_map = $match;
+        }
     return $line;
 }
 
 sub add_pointer_links_to_line {
-    my ( $line, $pointers_ref, $found_pointers_ref ) = validate_pos(
+    my ( $line, $pointers_ref, $found_pointers_ref, $pointees_ref ) = validate_pos(
         @_,
         { type => SCALAR },
         { type => HASHREF },
         { type => HASHREF },
+        { type => HASHREF },
     );
-
-    #Match $line against our hash of POINTERS regexes
-    #add HTML link to matching lines
+    
+    
+    # Match $line against our hash of POINTERS regexes
+    # add HTML link to matching lines
     foreach my $pointerType ( sort keys %{$pointers_ref} ) {
         foreach
           my $rule_number ( sort keys %{ $pointers_ref->{"$pointerType"} } )
         {
-
-            #The while allows multiple pointers in one line
+            # The while allows multiple pointers in one line
             while (
                 $line =~ m/$pointers_ref->{"$pointerType"}{"$rule_number"}/xg )
             {
-                #Save what we captured
+                
+                # Save what we captured
                 #my $unique_id = $+{unique_id};
                 my $points_to = $+{points_to};
 
-                #abort if $points_to isn't defined
+                # abort if $points_to isn't defined
                 unless ($points_to) {
 
                     #say "Null points_to:";
@@ -1481,9 +1541,11 @@ sub add_pointer_links_to_line {
                 $found_pointers_ref->{ "$pointerType" . '_' . "$points_to" } =
                   "$line";
 
+                # An array of the possible pointers for this rule
                 my @fields;
 
                 # Does this specific rule support space separated lists?
+                # (indicated by "_list" in the rule number)
                 if ( $rule_number =~ /_list/ix ) {
 
                     # Split it up by whitespace
@@ -1497,29 +1559,34 @@ sub add_pointer_links_to_line {
                     push @fields, $points_to;
 
                 }
-
-                #Now for each pointer we found...
-                foreach my $label (@fields) {
-
-                    #Construct the text of a link
+                
+                # Now for each pointer we found...
+                foreach my $label (@fields) {                    
+                    
+                    # Construct the text of a link
                     my $linkText =
                         '<a href="#'
                       . $pointerType . '_'
                       . $label
                       . "\">$label</a>";
 
-                    #Insert the link back into the line
-                    #Link point needs to be surrounded by whitespace or end of line
+                    # Insert the link back into the line
+                    # Link point needs to be surrounded by whitespace or end of line
                     #                     $line =~ s/(\s+) $label (\s+|$)/$1$linkText$2/gx;
 
-                    #Notice the (?-x:$label)
-                    #That's disabling ignoring spaces just for the $label part
-                    #Handles identifiers with spaces in them
-                    #BUG TODO How to handle when pointers of two different types (eg a TRACK and an SLA) with the same name are referenced in the same line
+                    # Notice the (?-x:$label)
+                    # That's disabling ignoring spaces just for the $label part
+                    # Handles identifiers with spaces in them
+                    # BUG TODO How to handle when pointers of two different 
+                    # types (eg a TRACK and an SLA) with the same name are 
+                    # referenced in the same line
                     $line =~ s/(\s+) (?-x:$label) (\s+|$)/$1$linkText$2/gx;
                 }
 
             }
+            #                 say  "Pre-match " . substr($line, 0,     $-[0]);
+            #                 say  "Match " . substr($line, $-[0], $+[0]-$-[0]);
+            #                 say  "Post-match " . substr($line, $+[0]);
         }
     }
     return $line;
@@ -1537,8 +1604,8 @@ sub add_pointee_links_to_line {
         { type => HASHREF },
       );
 
-    #Match $line against our hash of POINTEES regexes
-    #add HTML anchor to matching lines
+    # Match $line against our hash of POINTEES regexes
+    # add HTML anchor to matching lines
     foreach my $pointeeType ( sort keys %{$pointees_ref} ) {
         foreach
           my $rule_number ( sort keys %{ $pointees_ref->{"$pointeeType"} } )
@@ -1548,11 +1615,11 @@ sub add_pointee_links_to_line {
                 my $unique_id  = $+{unique_id};
                 my $pointed_at = $+{pointed_at};
 
-                #Save what we found for debugging
+                # Save what we found for debugging
                 $found_pointees_ref->{$unique_id} = $pointed_at;
 
-                #Have we seen this pointee already?
-                #We only want to make a section marker for the first occurrence
+                # Have we seen this pointee already?
+                # We only want to make a section marker for the first occurrence
                 if ( !$pointee_seen_in_file_ref->{$pointeeType}{$unique_id} ) {
                     $pointee_seen_in_file_ref->{$pointeeType}{$unique_id} =
                       "$pointed_at";
@@ -1567,16 +1634,16 @@ sub add_pointee_links_to_line {
                     #                         $line
                     #                             =~ s/ (\s+) $pointed_at ( \s+ | $ ) /$1$anchor_text$2/ixg;
 
-                    #Add a span for what's actually pointed at
-                    #See "output_as_html" to adjust styling via CSS
+                    # Add a span for what's actually pointed at
+                    # See "output_as_html" to adjust styling via CSS
                     $line =~
                       s/ (\s+) $pointed_at ( \s+ | $ ) /$1<span class="pointed_at">$pointed_at<\/span>$2/ixg;
 
                     my $class   = "pointee";
                     my $span_id = $pointeeType . '_' . $pointed_at;
 
-                    #Add a span for links to refer to
-                    #See "output_as_html" to adjust styling via css
+                    # Add a span for links to refer to
+                    # See "output_as_html" to adjust styling via css
                     $line = '<br>'
                       . '<span id="'
                       . $span_id . '" '
@@ -1585,7 +1652,7 @@ sub add_pointee_links_to_line {
                       . $line
                       . '</span>';
 
-                    #Don't loop anymore since each line can only be one pointee
+                    # Don't loop again since each line can only be one pointee
                     return $line;
                 }
             }
@@ -1596,7 +1663,7 @@ sub add_pointee_links_to_line {
 
 sub external_linking_find_pointees {
 
-    #Construct a hash of the types of pointees we've seen in this file
+    # Construct a hash of the types of pointees we've seen in this file
     my ( $array_of_lines_ref, $pointee_regex_ref, $filename ) = validate_pos(
         @_,
         { type => ARRAYREF },
@@ -1606,23 +1673,24 @@ sub external_linking_find_pointees {
 
     my %foundPointees = ();
 
-    #Keep track of the last interface name we saw
+    # Keep track of the last interface name we saw
     my $current_interface = "unknown";
 
     foreach my $line (@$array_of_lines_ref) {
         chomp $line;
 
-        #Remove linefeeds
+        # Remove linefeeds
         $line =~ s/\R//gx;
 
-        #Update the last seen interface name if we see a new one
+        # Update the last seen interface name if we see a new one
         $line =~
           /^ \s* interface \s+ (?<current_interface> .*?) (?: \s | $) /ixsm;
+    
         $current_interface = $+{current_interface} if $+{current_interface};
 
         #         $current_interface //= "unknown";
 
-        #Match it against our hash of pointees regexes
+        # Match it against our hash of pointees regexes
         foreach my $pointeeType ( sort keys %{$pointee_regex_ref} ) {
             foreach
               my $pointeeKey2 ( keys %{ $pointee_regex_ref->{"$pointeeType"} } )
@@ -1633,7 +1701,7 @@ sub external_linking_find_pointees {
                     my $unique_id  = $+{unique_id};
                     my $pointed_at = $+{pointed_at};
 
-                    #Add the current interface name for ip_addresses
+                    # Add the current interface name for ip_addresses
                     if ( $pointeeType eq 'ip_address' ) {
                         $foundPointees{$filename}{$pointeeType}{$unique_id} =
                           "$pointed_at,$current_interface";
@@ -1647,34 +1715,35 @@ sub external_linking_find_pointees {
             }
         }
     }
+    
     return \%foundPointees;
 }
 
 sub calculate_subnets {
 
-    #Do subnet calculations on each IP address we found
+    # Do subnet calculations on each IP address we found
     #Add these as new hashes to use in external lookups in iosToHtml
 
     my ( $pointees_seen_ref, $filename ) =
       validate_pos( @_, { type => HASHREF }, { type => SCALAR }, );
 
-    #For every IP address we found
+    # For every IP address we found
     foreach my $ip_address_key (
         sort keys %{ $pointees_seen_ref->{$filename}{'ip_address'} } )
     {
 
-        #Split out IP address and interface components
+        # Split out IP address and interface components
         my ( $ip_and_netmask, $interface ) = split( ',',
             $pointees_seen_ref->{$filename}{'ip_address'}{$ip_address_key} );
 
-        #HACK In RIOS, there's a space between IP address and CIDR
-        #Remove that without hopefully causing other issues
+        # HACK In RIOS, there's a space between IP address and CIDR
+        # Remove that without hopefully causing other issues
         $ip_and_netmask =~ s|\s/|/|;
 
-        #Try to create a new NetAddr::IP object from this key
+        # Try to create a new NetAddr::IP object from this key
         my $subnet = NetAddr::IP->new($ip_and_netmask);
 
-        #If it worked...
+        # If it worked...
         if ($subnet) {
 
             my $ip_addr        = $subnet->addr;
@@ -1685,18 +1754,18 @@ sub calculate_subnets {
             my $isRfc1918      = $subnet->is_rfc1918();
             my $range          = $subnet->range();
 
-            #All info by filename
+            # All info by filename
             $pointees_seen_ref->{$filename}{"subnet"}{$network} = 1;
 
-            #All info by IP address pointing to file name
+            # All info by IP address pointing to file name
             $pointees_seen_ref->{'ip_address'}{$ip_addr} =
               "$filename,$interface";
 
-            #All info by subnet pointing to file name
+            # All info by subnet pointing to file name
             $pointees_seen_ref->{'subnet'}{$network}{$filename} =
               $interface;
 
-            #Smart comment
+            #Smart comments
             # ### <file>[<line>]
             # ### $pointees_seen_ref
 
@@ -1711,7 +1780,7 @@ sub calculate_subnets {
 
 sub create_external_host_info_hash {
 
-    #Let's recreate this every time
+    # Let's recreate this every time
     #         #This hash must be pre-created by create_host_info_hashes.pl
     #         if ( !-e $Bin . 'host_info_hash.stored' ) {
     say "Gather info for external linking";
@@ -1736,40 +1805,40 @@ sub create_external_host_info_hash {
     #         say "Loading host_info_hash";
     #         $host_info_ref = retrieve( "$Bin" . 'host_info_hash.stored' )
     #             or die "Unable to open host_info_hash";
-    #load regexes for the lists that are referred to ("pointees")
+    # load regexes for the lists that are referred to ("pointees")
     my %pointees = do $Bin . 'external_pointees.pl';
 
-    #For collecting overall info
+    # For collecting overall info
     my $overall_hash_ref;
 
-    #Loop through every file provided on command line
+    # Loop through every file provided on command line
     foreach my $filename (@ARGV) {
 
-        #reset these for each file
+        # reset these for each file
         my %foundPointees = ();
         my %pointeeSeen   = ();
 
-        #Open the input and output files
+        # Open the input and output files
         open my $filehandle, '<', $filename or die $!;
 
-        #Read in the whole file
+        # Read in the whole file
         my @array_of_lines = <$filehandle>
           or die $!;    # Reads all lines into array
 
         close $filehandle;
 
-        #Progress indicator
+        # Progress indicator
         say $filename;
 
-        #Find all pointees in this file
+        # Find all pointees in this file
         my $found_pointees_ref =
           external_linking_find_pointees( \@array_of_lines, \%pointees,
             $filename );
 
-        #Calculate subnets etc for this host's IP addresses
+        # Calculate subnets etc for this host's IP addresses
         calculate_subnets( $found_pointees_ref, $filename );
 
-        #Merge this new hash of hashes into our overall hash
+        # Merge this new hash of hashes into our overall hash
         $overall_hash_ref = merge( $found_pointees_ref, $overall_hash_ref );
 
     }
@@ -1790,17 +1859,15 @@ sub create_external_host_info_hash {
 
     #A reference to the hash of host information
     #         $host_info_ref = $overall_hash_ref;
+    # print Dumper $overall_hash_ref;
     return $overall_hash_ref;
 
-    #             print Dumper $host_info_ref;
-    #             exit;
-    #             return (0);
 
 }
 
 sub append_message_to_file {
 
-    #Append to a file, locking it to ensure thread safety
+    # Append to a file, locking it to ensure thread safety
     my ( $msg, $filename ) =
       validate_pos( @_, { type => SCALAR }, { type => SCALAR }, );
 
@@ -1812,46 +1879,140 @@ sub append_message_to_file {
 
 sub is_subnet_mask {
 
-    #Test if supplied quad is likely a subnet mask or wildcard mask
+    # Test if supplied quad is likely a subnet mask or wildcard mask
     my ($mask_to_test) = validate_pos( @_, { type => SCALAR }, );
 
-    #For now I'm just going to check whether the first bit is set and consider
-    #that to indicate a subnet mask
-    #Perhaps there are better heuristics to consider
+    # For now I'm just going to check whether the first bit is set and consider
+    # that to indicate a subnet mask
+    # BUG TODO Perhaps there are better heuristics to consider?
 
-    #Split the incoming parameter into 4 octets
+    # Split the incoming parameter into 4 octets
     my @mask_octets = split /\./, $mask_to_test;
 
-    #Get the first octet
+    # Get the first octet
     my $value     = $mask_octets[0];
     my $test_mask = 0b10000000;        #128
 
-    #Return value is whether they match exactly
+    # Return value is whether they match exactly
     return ( ( $value & $test_mask ) == $test_mask );
 }
 
 sub find_longest_subnet_mask_in_wildcard_mask {
-
-    #This is dumb, I know, but I was having trouble with a smarter solution
-    #Find first unset bit after finding one set bit
-
+    # Find first unset bit after finding one set bit
+    # This is dumb, I know, but I was having trouble with a smarter solution
     my $mask = shift;
 
     my $binary_rep;
     my @octets = split /\./, $mask;
+    
     foreach my $octet (@octets) {
 
-        #Just make one long binary string out of the octets
+        # Just make one long binary string out of the octets
         $binary_rep .= sprintf( "%08b", $octet );
     }
 
-    #Number of zeros at the beginning of string
+    # Number of zeros at the beginning of string
     my ($zeroes) = $binary_rep =~ /^([0]+)/;
     my $prefix_length = length($zeroes);
 
-    #Bit position of first 0 after a 1
+    # Bit position of first 0 after a 1
     my ($zeroes_ones) = $binary_rep =~ /^([0]+[1]+)/;
     my $prefix_length_long = length($zeroes_ones);
 
     return ( $prefix_length, $prefix_length_long );
+}
+
+sub find_invalid_pointers_in_line {
+    my ( $line, $invalid_pointers_ref, $found_pointers_ref ) = validate_pos(
+        @_,
+        { type => SCALAR },
+        { type => HASHREF },
+        { type => HASHREF },
+    );
+
+    #Match $line against our hash of POINTERS regexes
+    #add HTML link to matching lines
+    foreach my $pointerType ( sort keys %{$invalid_pointers_ref} ) {
+        foreach
+          my $rule_number ( sort keys %{ $invalid_pointers_ref->{"$pointerType"} } )
+        {
+#             say "Negative Rule: " . $invalid_pointers_ref->{"$pointerType"}{"$rule_number"};
+            
+            #The while allows multiple pointers in one line
+            while (
+                $line =~ m/$invalid_pointers_ref->{"$pointerType"}{"$rule_number"}/xg )
+            {
+
+#                 my $points_to = $+{points_to};
+                
+                # Getting what didn't match, instead of what did
+                my $points_to = substr($line, $+[0]);
+                
+                say "Negative $pointerType|$rule_number|$points_to: $points_to|$line";
+#                 say "Test 1 " . $1;
+#                 say "Test 2 " . $&;
+#                 say  "Test 3 " . substr($line, 0,     $-[0]);
+#                 say  "Test 4 " . substr($line, $-[0], $+[0]-$-[0]);
+#                 say  "Test 5 " . substr($line, $+[0]);
+                #abort if $points_to isn't defined
+                unless ($points_to) {
+
+                    #say "Null points_to:";
+                    #say $invalid_pointers_ref{"$pointerType"}{"$rule_number"};
+                    #say "\t$line";
+                    #say "\tpointer_type: $pointerType | rule: $rule_number";
+                    next;
+                }
+
+#                 # Save what we found for debugging
+#                 $found_pointers_ref->{
+#                     "$line|$pointerType|$rule_number|$points_to"} =
+#                   "Points_to: $points_to | pointerType: $pointerType | RuleNumber: $rule_number";
+# 
+#                 # Save this for helping us determine which pointees have pointers referring to them
+#                 $found_pointers_ref->{ "$pointerType" . '_' . "$points_to" } =
+#                   "$line";
+# 
+#                 my @fields;
+# 
+#                 # Does this specific rule support space separated lists?
+#                 if ( $rule_number =~ /_list/ix ) {
+# 
+#                     # Split it up by whitespace
+#                     @fields = split( '\s+', $points_to );
+#                     ### ------------------------------------fields-----------------------
+#                     ### $points_to
+#                     ### @fields
+#                 }
+#                 else {
+#                     # Else treat the whole thing as one pointer
+#                     push @fields, $points_to;
+# 
+#                 }
+# 
+#                 #Now for each pointer we found...
+#                 foreach my $label (@fields) {
+# 
+#                     #Construct the text of a link
+#                     my $linkText =
+#                         '<a href="#'
+#                       . $pointerType . '_'
+#                       . $label
+#                       . "\">$label</a>";
+# 
+#                     #Insert the link back into the line
+#                     #Link point needs to be surrounded by whitespace or end of line
+#                     #                     $line =~ s/(\s+) $label (\s+|$)/$1$linkText$2/gx;
+# 
+#                     #Notice the (?-x:$label)
+#                     #That's disabling ignoring spaces just for the $label part
+#                     #Handles identifiers with spaces in them
+#                     #BUG TODO How to handle when pointers of two different types (eg a TRACK and an SLA) with the same name are referenced in the same line
+#                     $line =~ s/(\s+) (?-x:$label) (\s+|$)/$1$linkText$2/gx;
+#                 }
+
+            }
+        }
+    }
+    return $line;
 }

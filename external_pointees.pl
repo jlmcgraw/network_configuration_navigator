@@ -73,7 +73,7 @@
                     $
                     )/ixsm,
         },
-        'hostname' => {
+    'hostname' => {
         1 => qr/(?<unique_id> ^ \s* 
                             hostname \s+
                             (?<pointed_at>

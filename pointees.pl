@@ -1,13 +1,13 @@
-#regexes for the lists that are referred to
+# Regexes for the lists that are referred to ("pointers")
 #
-#Note that the keys/categories in pointers and pointees match (acl, route_map etc)
-#This is so we can linkify properly
-#You must keep pointers/pointees categories in sync
+# NOTE that the keys/categories in pointers and pointees match (acl, route_map etc)
+# This is so we can linkify properly
+# You must keep pointers/pointees categories in sync
 #
-#Each first level key/category is the type of item its regexes match
+# Each first level key/category is the type of item its regexes match
 #
-#Named capture "unique_id" is the unique beginning of the pointed to thingy
-#Named capture "pointed_at" is what to match with %pointers{$points_to} hash
+# Named capture "unique_id" is the unique beginning of the pointed to thingy
+# Named capture "pointed_at" is what to match with %pointers{$points_to} hash
 
 'acl' => {
     1 => qr/(?<unique_id>
@@ -33,6 +33,7 @@
                 ^ \s*
                 mac \s+
                 access-list \s+
+                (?: (?: standard | extended) \s+)?
                 (?<pointed_at>
                     (?: $valid_cisco_name)
                 )
@@ -118,9 +119,9 @@
     'community_list' => {
         1 =>
             qr/(?<unique_id> ^ \s* 
-                    ip \s+ 
-                    community-list \s+ 
-                    (?:standard|extended|expanded) \s+ 
+                    ip              \s+ 
+                    community-list  \s+ 
+                    (?: (?: standard|extended|expanded) \s+)?
                     (?<pointed_at> $valid_cisco_name) )
                     /ixsm,
         2 => qr/(?<unique_id> ^ \s*
@@ -748,11 +749,70 @@
     #BUG TODO: Get ID's with spaces working right and consolidate these classes
     1 => qr/(?<unique_id>
                         ^ \s*
-                        crypto \s+
-                        isakmp \s+
+                        crypto  \s+
+                        isakmp  \s+
                         profile \s+
                         (?<pointed_at> $valid_cisco_name)
             )
             /ixsm,
+
+    },
+    'ios_bgp_peer_group' => {
+        # Added 2017-04-22
+        1 => qr/(?<unique_id>
+                            ^ \s*
+                            neighbor                          \s+
+                            (?<pointed_at> $valid_cisco_name) \s+
+                            peer-group
+                            \s* $
+                )
+                /ixsm,
+
+    },
+    'nxos_flow_exporter' => {
+        # Added 2017-04-22
+        1 => qr/(?<unique_id>
+                            ^ \s*
+                            flow        \s+
+                            exporter    \s+
+                            (?<pointed_at> $valid_cisco_name)
+                            $
+                )
+                /ixsm,
+
+    },
+    'nxos_flow_monitor' => {
+        # Added 2017-04-22
+        1 => qr/(?<unique_id>
+                            ^ \s*
+                            flow        \s+
+                            monitor     \s+
+                            (?<pointed_at> $valid_cisco_name)
+                            $
+                )
+                /ixsm,
+
+    },
+    'nxos_flow_record' => {
+        # Added 2017-07-29
+        1 => qr/(?<unique_id>
+                            ^ \s*
+                            flow        \s+
+                            record      \s+
+                            (?<pointed_at> $valid_cisco_name)
+                            $
+                )
+                /ixsm,
+
+    },
+    'ios_voice_port' => {
+        # Added 2017-04-22
+        1 => qr/(?<unique_id>
+                            ^ \s*
+                            voice-port  \s+
+                            (?<pointed_at> $valid_cisco_name)
+                            $
+                )
+                /ixsm,
 
     },
